@@ -11,6 +11,11 @@ variable "aws_profile" {
   type        = string
 }
 
+variable "aws_account_id" {
+  description = "AWS Account ID"
+  type        = string
+}
+
 # ===========================
 # Common Variables
 # ===========================
@@ -28,7 +33,6 @@ variable "region" {
 variable "team_name" {
   description = "Cloud naming identifier"
   type        = string
-  default     = "us-ent-east"
 }
 
 # ===========================
