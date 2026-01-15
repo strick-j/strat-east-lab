@@ -19,6 +19,11 @@ variable "aws_account_id" {
 # ===========================
 # Common Variables
 # ===========================
+variable "alias" {
+  description = "Short alias identifier for naming resources (e.g., 'Papaya', 'Mango')"
+  type        = string
+}
+
 variable "asset_owner_name" {
   description = "Name of the human that the cloud team can contact with questions"
   type        = string
@@ -33,14 +38,6 @@ variable "region" {
 variable "team_name" {
   description = "Cloud naming identifier"
   type        = string
-}
-
-# ===========================
-# S3 Variables
-# ===========================
-variable "allowed_ips" {
-  description = "Additional IPs/CIDRs allowed to access the bucket"
-  type        = list(string)
 }
 
 # ===========================

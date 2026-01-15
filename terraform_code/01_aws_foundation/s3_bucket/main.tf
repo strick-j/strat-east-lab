@@ -7,8 +7,7 @@ resource "aws_s3_bucket" "secure_bucket" {
   }
 
   lifecycle {
-    ignore_changes = [ tags ]
-    prevent_destroy = true
+    ignore_changes = [tags]
   }
 }
 
@@ -31,13 +30,13 @@ resource "aws_s3_bucket_policy" "secure_policy" {
         Effect    = "Allow"
         Principal = "*"
         Action    = "s3:*"
-        Resource  = [
+        Resource = [
           aws_s3_bucket.secure_bucket.arn,
           "${aws_s3_bucket.secure_bucket.arn}/*"
         ]
         Condition = {
           StringEquals = {
-           "aws:sourceVpce" = var.s3_vpc_endpoint_id
+            "aws:sourceVpce" = var.s3_vpc_endpoint_id
           }
         }
       },
@@ -46,13 +45,13 @@ resource "aws_s3_bucket_policy" "secure_policy" {
         Effect    = "Allow"
         Principal = "*"
         Action    = "s3:*"
-        Resource  = [
+        Resource = [
           aws_s3_bucket.secure_bucket.arn,
           "${aws_s3_bucket.secure_bucket.arn}/*"
         ]
         Condition = {
           IpAddress = {
-            "aws:SourceIp" = var.allowed_ips
+            "aws:SourceIp" = var.trusted_ips
           }
         }
       }

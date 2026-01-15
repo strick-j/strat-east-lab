@@ -5,7 +5,7 @@ resource "aws_vpc" "main" {
   enable_dns_hostnames = true
 
   tags = {
-    Name = "${var.team_name}-vpc"
+    Name  = "${lower(var.alias)}-vpc"
     Owner = var.asset_owner_name
   }
 }
@@ -16,7 +16,7 @@ resource "aws_vpc_dhcp_options" "custom_dns" {
   domain_name_servers = [var.dns_server_ip, "AmazonProvidedDNS"]
 
   tags = {
-    Name  = "${var.team_name}-dhcp-options"
+    Name  = "${lower(var.alias)}-dhcp-options"
     Owner = var.asset_owner_name
   }
 }
@@ -32,7 +32,7 @@ resource "aws_internet_gateway" "igw" {
   vpc_id = aws_vpc.main.id
 
   tags = {
-    Name = "${var.team_name}-igw"
+    Name  = "${lower(var.alias)}-igw"
     Owner = var.asset_owner_name
   }
 }
@@ -45,7 +45,7 @@ resource "aws_subnet" "public" {
   map_public_ip_on_launch = true
 
   tags = {
-    Name = "${var.team_name}-public-subnet"
+    Name  = "${lower(var.alias)}-public-subnet"
     Owner = var.asset_owner_name
   }
 }
@@ -58,15 +58,15 @@ resource "aws_subnet" "private" {
   map_public_ip_on_launch = false
 
   tags = {
-    Name = "${var.team_name}-private-subnet"
+    Name  = "${lower(var.alias)}-private-subnet"
     Owner = var.asset_owner_name
   }
 }
 
 # Elastic IP for NAT Gateway
 resource "aws_eip" "nat_eip" {
-    tags = {
-    Name = "${var.team_name}-nat-eip"
+  tags = {
+    Name  = "${lower(var.alias)}-nat-eip"
     Owner = var.asset_owner_name
   }
 }
@@ -77,7 +77,7 @@ resource "aws_nat_gateway" "nat" {
   subnet_id     = aws_subnet.public.id
 
   tags = {
-    Name = "${var.team_name}-nat-gateway"
+    Name  = "${lower(var.alias)}-nat-gateway"
     Owner = var.asset_owner_name
   }
 
@@ -94,7 +94,7 @@ resource "aws_route_table" "public" {
   }
 
   tags = {
-    Name = "${var.team_name}-public-rt"
+    Name  = "${lower(var.alias)}-public-rt"
     Owner = var.asset_owner_name
   }
 }
@@ -115,7 +115,7 @@ resource "aws_route_table" "private" {
   }
 
   tags = {
-    Name = "${var.team_name}-private-rt"
+    Name  = "${lower(var.alias)}-private-rt"
     Owner = var.asset_owner_name
   }
 }
@@ -129,8 +129,8 @@ resource "aws_route_table_association" "private" {
 
 resource "aws_vpc_endpoint" "s3" {
   vpc_id            = aws_vpc.main.id
-  service_name      = "com.amazonaws.${var.region}.s3"
+  service_name      = "com.amazonaws.${var.aws_region}.s3"
   vpc_endpoint_type = "Gateway"
   route_table_ids   = [aws_route_table.private.id]
-  tags = { Name = "${var.team_name}-s3-gateway-endpoint" }
+  tags              = { Name = "${lower(var.alias)}-s3-gateway-endpoint" }
 }

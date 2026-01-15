@@ -1,5 +1,5 @@
 resource "aws_security_group" "ssh_from_trusted_ips" {
-  name        = "${var.team_name}-trusted-external-ssh-sg"
+  name        = "${lower(var.alias)}-trusted-external-ssh-sg"
   description = "Allow SSH only from trusted IPs"
   vpc_id      = var.vpc_id
 
@@ -22,13 +22,13 @@ resource "aws_security_group" "ssh_from_trusted_ips" {
   }
 
   tags = {
-    Name  = "${var.team_name}-trusted-ip-ssh-sg"
+    Name  = "${lower(var.alias)}-trusted-ip-ssh-sg"
     Owner = var.asset_owner_name
   }
 }
 
 resource "aws_security_group" "rdp_from_trusted_ips" {
-  name        = "${var.team_name}-trusted-external-rdp-sg"
+  name        = "${lower(var.alias)}-trusted-external-rdp-sg"
   description = "Allow RDP only from trusted IPs"
   vpc_id      = var.vpc_id
 
@@ -51,13 +51,13 @@ resource "aws_security_group" "rdp_from_trusted_ips" {
   }
 
   tags = {
-    Name  = "${var.team_name}-trusted-ip-rdp-sg"
+    Name  = "${lower(var.alias)}-trusted-ip-rdp-sg"
     Owner = var.asset_owner_name
   }
 }
 
 resource "aws_security_group" "ssh_internal_flat" {
-  name        = "${var.team_name}-internal-flat-ssh-sg"
+  name        = "${lower(var.alias)}-internal-flat-ssh-sg"
   description = "Allow SSH only from internal subnets"
   vpc_id      = var.vpc_id
 
@@ -81,13 +81,13 @@ resource "aws_security_group" "ssh_internal_flat" {
   }
 
   tags = {
-    Name  = "${var.team_name}-trusted-ip-ssh-sg"
+    Name  = "${lower(var.alias)}-trusted-ip-ssh-sg"
     Owner = var.asset_owner_name
   }
 }
 
 resource "aws_security_group" "rdp_internal_flat" {
-  name        = "${var.team_name}-internal-flat-rdp-sg"
+  name        = "${lower(var.alias)}-internal-flat-rdp-sg"
   description = "Allow RDP only from internal subnets"
   vpc_id      = var.vpc_id
 
@@ -110,13 +110,13 @@ resource "aws_security_group" "rdp_internal_flat" {
   }
 
   tags = {
-    Name  = "${var.team_name}-internal-flat-rdp-sg"
+    Name  = "${lower(var.alias)}-internal-flat-rdp-sg"
     Owner = var.asset_owner_name
   }
 }
 
 resource "aws_security_group" "winrm_internal_flat" {
-  name        = "${var.team_name}-internal-winrm-sg"
+  name        = "${lower(var.alias)}-internal-winrm-sg"
   description = "Allow WINRM only from internal subnets"
   vpc_id      = var.vpc_id
 
@@ -139,13 +139,13 @@ resource "aws_security_group" "winrm_internal_flat" {
   }
 
   tags = {
-    Name  = "${var.team_name}-internal-flat-winrm-sg"
+    Name  = "${lower(var.alias)}-internal-flat-winrm-sg"
     Owner = var.asset_owner_name
   }
 }
 
 resource "aws_security_group" "https_internal_flat" {
-  name        = "${var.team_name}-internal-flat-https-sg"
+  name        = "${lower(var.alias)}-internal-flat-https-sg"
   description = "Allow HTTPS only from internal subnets"
   vpc_id      = var.vpc_id
 
@@ -169,13 +169,13 @@ resource "aws_security_group" "https_internal_flat" {
   }
 
   tags = {
-    Name  = "${var.team_name}-internal-flat-https-sg"
+    Name  = "${lower(var.alias)}-internal-flat-https-sg"
     Owner = var.asset_owner_name
   }
 }
 
 resource "aws_security_group" "jenkins_8080" {
-  name        = "${var.team_name}-jenkins-8080-sg"
+  name        = "${lower(var.alias)}-jenkins-8080-sg"
   description = "8080"
   vpc_id      = var.vpc_id
 
@@ -199,7 +199,7 @@ resource "aws_security_group" "jenkins_8080" {
   }
 
   tags = {
-    Name  = "${var.team_name}-jenkins-8080-sg"
+    Name  = "${lower(var.alias)}-jenkins-8080-sg"
     Owner = var.asset_owner_name
   }
 }
@@ -294,7 +294,7 @@ locals {
 }
 
 resource "aws_security_group" "domain_controller_sg" {
-  name        = "domain-controller-sg"
+  name        = "${lower(var.alias)}-domain-controller-sg"
   description = "Security Group for Windows 2016 Domain Controller (AD & DNS)"
   vpc_id      = var.vpc_id
 
@@ -318,7 +318,8 @@ resource "aws_security_group" "domain_controller_sg" {
   }
 
   tags = {
-    Name = "domain-controller-sg"
+    Name  = "${lower(var.alias)}-domain-controller-sg"
+    Owner = var.asset_owner_name
   }
 }
 
@@ -365,12 +366,13 @@ resource "aws_security_group" "sia_windows_target_sg" {
   }
 
   tags = {
-    Name = "sia-windows-target-sg"
+    Name  = "sia-windows-target-sg"
+    Owner = var.asset_owner_name
   }
 }
 
 resource "aws_security_group" "mysql_target_sg" {
-  name        = "${var.team_name}-mysql-sg"
+  name        = "${lower(var.alias)}-mysql-sg"
   description = "Allow MySQL from private subnets only"
   vpc_id      = var.vpc_id
 
@@ -390,12 +392,13 @@ resource "aws_security_group" "mysql_target_sg" {
   }
 
   tags = {
-    Name        = "${var.team_name}-mysql-sg"
+    Name  = "${lower(var.alias)}-mysql-sg"
+    Owner = var.asset_owner_name
   }
 }
 
 resource "aws_security_group" "postgresql_target_sg" {
-  name        = "${var.team_name}-postgresql-sg"
+  name        = "${lower(var.alias)}-postgresql-sg"
   description = "Allow PostgreSQL from private subnets only"
   vpc_id      = var.vpc_id
 
@@ -415,14 +418,14 @@ resource "aws_security_group" "postgresql_target_sg" {
   }
 
   tags = {
-    Name        = "${var.team_name}-postgresql-sg"
+    Name  = "${lower(var.alias)}-postgresql-sg"
+    Owner = var.asset_owner_name
   }
 }
 
-# Add this to the security groups main.tf file
 
 resource "aws_security_group" "mssql_target_sg" {
-  name        = "${var.team_name}-mssql-sg"
+  name        = "${lower(var.alias)}-mssql-sg"
   description = "Allow MSSQL from private subnets only"
   vpc_id      = var.vpc_id
 
@@ -442,6 +445,7 @@ resource "aws_security_group" "mssql_target_sg" {
   }
 
   tags = {
-    Name = "${var.team_name}-mssql-sg"
+    Name  = "${lower(var.alias)}-mssql-sg"
+    Owner = var.asset_owner_name
   }
 }

@@ -1,9 +1,7 @@
-#get the current account number
 data "aws_caller_identity" "current" {}
 
-#create the policy
-resource "aws_iam_policy" "SecretsHubOnboardingPolicy" {
-  name        = "SecretsHubOnboardingPolicy"
+resource "aws_iam_policy" "secrets_hub_onboarding_policy" {
+  name        = "${lower(var.alias)}-secrets-hub-onboarding-policy"
   description = "Permissions required to onboard Secrets Hub"
 
   policy = jsonencode(
@@ -19,13 +17,13 @@ resource "aws_iam_policy" "SecretsHubOnboardingPolicy" {
             }
           },
           "Action" : "secretsmanager:CreateSecret",
-          "Resource" : "arn:aws:secretsmanager:${var.SecretsManagerRegion}:${data.aws_caller_identity.current.account_id}:secret:*",
+          "Resource" : "arn:aws:secretsmanager:${var.secrets_manager_region}:${data.aws_caller_identity.current.account_id}:secret:*",
           "Effect" : "Allow"
         },
         {
           "Condition" : {
             "StringEquals" : {
-              "aws:RequestedRegion" : "${var.SecretsManagerRegion}"
+              "aws:RequestedRegion" : "${var.secrets_manager_region}"
             }
           },
           "Action" : "secretsmanager:ListSecrets",
@@ -46,7 +44,7 @@ resource "aws_iam_policy" "SecretsHubOnboardingPolicy" {
             "secretsmanager:TagResource",
             "secretsmanager:UntagResource"
           ],
-          "Resource" : "arn:aws:secretsmanager:${var.SecretsManagerRegion}:${data.aws_caller_identity.current.account_id}:secret:*",
+          "Resource" : "arn:aws:secretsmanager:${var.secrets_manager_region}:${data.aws_caller_identity.current.account_id}:secret:*",
           "Effect" : "Allow"
         },
         {
@@ -65,7 +63,7 @@ resource "aws_iam_policy" "SecretsHubOnboardingPolicy" {
             "secretsmanager:TagResource",
             "secretsmanager:UntagResource"
           ],
-          "Resource" : "arn:aws:secretsmanager:${var.SecretsManagerRegion}:${data.aws_caller_identity.current.account_id}:secret:*",
+          "Resource" : "arn:aws:secretsmanager:${var.secrets_manager_region}:${data.aws_caller_identity.current.account_id}:secret:*",
           "Effect" : "Allow"
         },
         {
@@ -77,7 +75,7 @@ resource "aws_iam_policy" "SecretsHubOnboardingPolicy" {
           "Action" : [
             "secretsmanager:GetSecretValue"
           ],
-          "Resource" : "arn:aws:secretsmanager:${var.SecretsManagerRegion}:${data.aws_caller_identity.current.account_id}:secret:*",
+          "Resource" : "arn:aws:secretsmanager:${var.secrets_manager_region}:${data.aws_caller_identity.current.account_id}:secret:*",
           "Effect" : "Allow"
         }
       ]
@@ -85,16 +83,15 @@ resource "aws_iam_policy" "SecretsHubOnboardingPolicy" {
   )
 }
 
-#create the role
-resource "aws_iam_role" "SecretsHubOnboardingRole" {
-  name = "us-ent-east-SecretsHubOnboardingRole"
+resource "aws_iam_role" "secrets_hub_onboarding_role" {
+  name = "${lower(var.alias)}-secrets-hub-onboarding-role"
   assume_role_policy = jsonencode(
     {
       Version = "2012-10-17",
       Statement = [{
         Effect = "Allow",
         Principal = {
-          AWS = "${var.CyberArkSecretsHubRoleARN}"
+          AWS = "${var.cyberark_secrets_hub_role_arn}"
         },
         Action = "sts:AssumeRole"
       }]
@@ -103,6 +100,6 @@ resource "aws_iam_role" "SecretsHubOnboardingRole" {
 }
 
 resource "aws_iam_role_policy_attachment" "cyberark_secrets_hub_policy_attachment" {
-  role = aws_iam_role.SecretsHubOnboardingRole.name
-  policy_arn = aws_iam_policy.SecretsHubOnboardingPolicy.arn
+  role = aws_iam_role.secrets_hub_onboarding_role.name
+  policy_arn = aws_iam_policy.secrets_hub_onboarding_policy.arn
 }

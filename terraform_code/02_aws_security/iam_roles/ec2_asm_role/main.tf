@@ -10,27 +10,11 @@ data "aws_iam_policy_document" "ec2_assume" {
 }
 
 resource "aws_iam_role" "ec2_asm_role" {
-  name               = var.ec2_aws_role_name
+  name               = "${lower(var.alias)}-ec2-asm-role"
   assume_role_policy = data.aws_iam_policy_document.ec2_assume.json
 }
 
-data "aws_iam_policy_document" "secrets" {
-  statement {
-    actions   = [
-      "secretsmanager:GetSecretValue",
-      "secretsmanager:GetResourcePolicy",
-      "secretsmanager:DescribeSecret"
-      ]
-    resources = var.cyberark_secret_arn
-  }
-}
-
-resource "aws_iam_role_policy" "secrets_policy" {
-  role   = aws_iam_role.ec2_asm_role.id
-  policy = data.aws_iam_policy_document.secrets.json
-}
-
-resource "aws_iam_instance_profile" "us_ent_east_ec2_asm_instance_profile" {
-  name = "us-ent-east-ec2-connector-profile"
+resource "aws_iam_instance_profile" "ec2_asm_instance_profile" {
+  name = "${lower(var.alias)}-instance-profile"
   role = aws_iam_role.ec2_asm_role.name
 }

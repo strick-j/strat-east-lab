@@ -1,6 +1,11 @@
 # ===========================
 # AWS provider variables
 # ===========================
+variable "statefile_bucket_name" {
+  description = "Name of the S3 bucket to read the remote state from"
+  type        = string
+}
+
 variable "aws_region" {
   description = "The AWS region to create resources in."
   type        = string
@@ -20,21 +25,16 @@ variable "asset_owner_name" {
   type        = string
 }
 
-variable "team_name" {
-  description = "Cloud naming identifier"
+variable "alias" {
+  description = "Short alias identifier for naming resources (e.g., 'Papaya', 'Mango')"
   type        = string
-  default     = "us-strat-east"
 }
 
 # ===========================
 # IAM Role Variables
 # ===========================
-variable "CyberArkSecretsHubRoleARN" {
+variable "cyberark_secrets_hub_role_arn" {
   description = "The Secrets Hub tenant role ARN which will be trusted by this role - get this from the cyberark tenant in secrets hub settings."
   type        = string
 }
 
-variable "cyberark_secret_arn" {
-  description = "ARN of the identity service account. Used if retrieving the service account from ASM."
-  type        = string
-}
