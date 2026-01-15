@@ -4,12 +4,12 @@ data "aws_caller_identity" "current" {}
 # =====================================================================
 # REMOTE STATE - Foundation Layer
 # =====================================================================
-data "terraform_remote_state" "foundation" {
+data "terraform_remote_state" "aws_foundation" {
   backend = "s3"
   config = {
     region  = var.aws_region
     bucket  = var.statefile_bucket_name
-    key     = "terraform/foundation.tfstate"
+    key     = "terraform/aws_foundation.tfstate"
     profile = var.aws_profile
   }
 }
@@ -35,7 +35,7 @@ resource "idsec_cmgr_pool_identifier" "identifier_1" {
 
 resource "idsec_cmgr_pool_identifier" "identifier_2" {
   type    = "AWS_VPC"
-  value   = data.terraform_remote_state.foundation.outputs.vpc_id
+  value   = data.terraform_remote_state.aws_foundation.outputs.vpc_id
   pool_id = idsec_cmgr_pool.cmgr_pool.pool_id
 }
 
