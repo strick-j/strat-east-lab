@@ -6,11 +6,6 @@ variable "statefile_bucket_name" {
   type        = string
 }
 
-variable "asset_owner_name" {
-  description = "Name of the human that the cloud team can contact with questions"
-  type        = string
-}
-
 variable "aws_region" {
   description = "AWS cloud region for the deployment"
   type        = string
@@ -26,83 +21,21 @@ variable "aws_account_id" {
   type        = string
 }
 
-variable "team_name" {
-  description = "cloud naming identifier"
+# ===========================
+# Generic Variables
+# ===========================
+variable "alias" {
+  description = "Short alias identifier for safe naming (e.g., 'Papaya', 'Mango')"
   type        = string
 }
 
-variable "amzn_linux_ami_id" {
-  description = "ami id for amazon linux ec2 - defaults to latest Amazon Linux 2023"
+# ===========================
+# CyberArk Safe Variables
+# ===========================
+variable "managing_cpm" {
+  description = "The name of the CPM that manages the safe"
   type        = string
-  default     = null
-}
-
-variable "amzn_windows_server_ami_id" {
-  description = "ami id for amazon windows ec2 - defaults to latest Windows Server 2022"
-  type        = string
-  default     = null
-}
-
-variable "iScheduler" {
-  description = "use if the system should be shutdown nightly"
-  type        = string
-  default     = "US_E_office"
-}
-
-variable "dc1_private_ip" {
-  description = "private ip of dc1"
-  type        = string
-}
-
-variable "linux_target_1_private_ip" {
-  description = "private ip of linux target 1"
-  type        = string
-}
-
-variable "windows_target_1_private_ip" {
-  description = "private ip of windows target 1"
-  type        = string
-}
-
-variable "connector_1_private_ip" {
-  description = "private ip of connector 1"
-  type        = string
-}
-
-variable "sia_aws_connector_1_private_ip" {
-  description = "private ip of sia aws connector 1"
-  type        = string
-}
-
-variable "sia_aws_connector_2_private_ip" {
-  description = "private ip of sia aws connector 2"
-  type        = string
-}
-
-variable "connector_pool_name" {
-  description = "Name of the connector pool you're adding the connector to"
-  type        = string
-}
-
-variable "identity_tenant_id" {
-  description = "your cyberark tenant id. Example: 'https://abc123.id.cyberark.cloud' woud be abc123"
-  type        = string
-}
-
-variable "platform_tenant_name" {
-  description = "name of your cyberark tenant. Example: 'https://acme.cyberark.cloud' would be acme"
-  type        = string
-}
-
-variable "workspace_type" {
-  description = "CSP identifier. AWS, Azure, or GCP"
-  type        = string
-  default     = "AWS"
-}
-
-variable "linux_target_1_hostname" {
-  description = "name of the target demo system for linux"
-  type        = string
+  default     = "PasswordManager"
 }
 
 # ===========================
