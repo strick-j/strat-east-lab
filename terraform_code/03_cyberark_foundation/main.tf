@@ -38,3 +38,36 @@ resource "idsec_cmgr_pool_identifier" "identifier_2" {
   value   = data.terraform_remote_state.foundation.outputs.vpc_id
   pool_id = idsec_cmgr_pool.strat_east_pool.pool_id
 }
+
+# =====================================================================
+# CyberArk Identity Security - Identity Roles
+# =====================================================================
+resource "idsec_identity_role" "windows_admins" {
+  role_name   = "Windows-Admins"
+  description = "Role for Windows administrators with elevated safe permissions"
+}
+
+resource "idsec_identity_role" "windows_users" {
+  role_name   = "Windows-Users"
+  description = "Role for Windows users with standard safe permissions"
+}
+
+resource "idsec_identity_role" "linux_admins" {
+  role_name   = "Linux-Admins"
+  description = "Role for Linux administrators with elevated safe permissions"
+}
+
+resource "idsec_identity_role" "linux_users" {
+  role_name   = "Linux-Users"
+  description = "Role for Linux users with standard safe permissions"
+}
+
+resource "idsec_identity_role" "database_admins" {
+  role_name   = "Database-Admins"
+  description = "Role for Database administrators with elevated safe permissions"
+}
+
+resource "idsec_identity_role" "database_users" {
+  role_name   = "Database-Users"
+  description = "Role for Database users with standard safe permissions"
+}
