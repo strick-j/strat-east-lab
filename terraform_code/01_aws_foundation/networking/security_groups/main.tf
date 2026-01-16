@@ -81,7 +81,7 @@ resource "aws_security_group" "ssh_internal_flat" {
   }
 
   tags = {
-    Name  = "${lower(var.alias)}-trusted-ip-ssh-sg"
+    Name  = "${lower(var.alias)}-internal-flat-ssh-sg"
     Owner = var.asset_owner_name
   }
 }
