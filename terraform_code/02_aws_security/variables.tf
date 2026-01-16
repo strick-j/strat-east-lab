@@ -1,11 +1,6 @@
 # ===========================
 # AWS provider variables
 # ===========================
-variable "statefile_bucket_name" {
-  description = "Name of the S3 bucket to read the remote state from"
-  type        = string
-}
-
 variable "aws_region" {
   description = "The AWS region to create resources in."
   type        = string
@@ -16,15 +11,9 @@ variable "aws_profile" {
   type        = string
 }
 
-
 # ===========================
 # Common Variables
 # ===========================
-variable "asset_owner_name" {
-  description = "Name of the human that the cloud team can contact with questions"
-  type        = string
-}
-
 variable "alias" {
   description = "Short alias identifier for naming resources (e.g., 'Papaya', 'Mango')"
   type        = string

@@ -23,7 +23,7 @@ resource "aws_iam_policy" "secrets_hub_onboarding_policy" {
         {
           "Condition" : {
             "StringEquals" : {
-              "aws:RequestedRegion" : "${var.secrets_manager_region}"
+              "aws:RequestedRegion" : var.secrets_manager_region
             }
           },
           "Action" : "secretsmanager:ListSecrets",
@@ -91,7 +91,7 @@ resource "aws_iam_role" "secrets_hub_onboarding_role" {
       Statement = [{
         Effect = "Allow",
         Principal = {
-          AWS = "${var.cyberark_secrets_hub_role_arn}"
+          AWS = var.cyberark_secrets_hub_role_arn
         },
         Action = "sts:AssumeRole"
       }]
