@@ -1,5 +1,3 @@
-data "aws_caller_identity" "current" {}
-
 module "vpc" {
   source              = "./networking/vpc"
   aws_region          = var.aws_region
@@ -31,7 +29,7 @@ module "security_groups" {
   vpc_id              = module.vpc.vpc_id
   trusted_ips         = var.trusted_ips
   alias               = var.alias
-  internal_subnets    = ["${var.public_subnet_cidr}", "${var.private_subnet_cidr}"]
+  internal_subnets    = [var.public_subnet_cidr, var.private_subnet_cidr]
   private_subnet_cidr = var.private_subnet_cidr
   public_subnet_cidr  = var.public_subnet_cidr
 }

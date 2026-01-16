@@ -23,11 +23,6 @@ variable "private_subnet_cidr" {
   type        = string
 }
 
-variable "public_subnet_cidr" {
-  description = "CIDR block of the public subnet"
-  type        = string
-}
-
 variable "alias" {
   description = "Short alias identifier for naming resources (e.g., 'Papaya', 'Mango')"
   type        = string

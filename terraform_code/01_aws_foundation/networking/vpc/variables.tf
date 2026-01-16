@@ -8,10 +8,6 @@ variable "aws_region" {
   type        = string
 }
 
-variable "team_name" {
-  description = "Team name identifier for tagging"
-  type        = string
-}
 
 variable "alias" {
   description = "Short alias identifier for naming resources (e.g., 'Papaya', 'Mango')"

@@ -11,11 +11,6 @@ variable "aws_profile" {
   type        = string
 }
 
-variable "aws_account_id" {
-  description = "AWS Account ID"
-  type        = string
-}
-
 # ===========================
 # Common Variables
 # ===========================
@@ -27,12 +22,6 @@ variable "alias" {
 variable "asset_owner_name" {
   description = "Name of the human that the cloud team can contact with questions"
   type        = string
-}
-
-variable "region" {
-  description = "AWS cloud region for the deployment"
-  type        = string
-  default     = "us-east-2"
 }
 
 variable "team_name" {
