@@ -11,12 +11,6 @@ variable "aws_region" {
   type        = string
 }
 
-variable "aws_profile" {
-  description = "AWS CLI profile to use for deployment. Leave empty to use IAM role of the host (e.g., for orchestration servers)"
-  type        = string
-  default     = ""
-}
-
 variable "aws_account_id" {
   description = "AWS Account ID"
   type        = string
