@@ -3,7 +3,6 @@ module "vpc" {
   aws_region          = var.aws_region
   alias               = var.alias
   asset_owner_name    = var.asset_owner_name
-  team_name           = var.team_name
   private_subnet_az   = var.private_subnet_az
   public_subnet_az    = var.public_subnet_az
   vpc_cidr            = var.vpc_cidr
@@ -31,5 +30,4 @@ module "security_groups" {
   alias               = var.alias
   internal_subnets    = [var.public_subnet_cidr, var.private_subnet_cidr]
   private_subnet_cidr = var.private_subnet_cidr
-  public_subnet_cidr  = var.public_subnet_cidr
 }
