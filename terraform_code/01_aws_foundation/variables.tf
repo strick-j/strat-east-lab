@@ -7,8 +7,9 @@ variable "aws_region" {
 }
 
 variable "aws_profile" {
-  description = "AWS CLI profile to use"
+  description = "AWS CLI profile to use. Leave empty to use IAM role of the host (e.g., for orchestration servers)"
   type        = string
+  default     = ""
 }
 
 # ===========================
@@ -21,11 +22,6 @@ variable "alias" {
 
 variable "asset_owner_name" {
   description = "Name of the human that the cloud team can contact with questions"
-  type        = string
-}
-
-variable "team_name" {
-  description = "Cloud naming identifier"
   type        = string
 }
 
