@@ -98,7 +98,7 @@ Configures CyberArk Identity Security platform:
 
 Each safe includes role-based access control with full, connect-only, and read-only permissions.
 
-**Credential Manager**
+**Connector Management**
 - Network and pool configuration for AWS resources
 - Pool identifiers based on AWS Account ID and VPC ID
 
