@@ -4,11 +4,6 @@ variable "aws_region" {
   type        = string
 }
 
-variable "aws_profile" {
-  description = "AWS CLI profile to use"
-  type        = string
-}
-
 variable "asset_owner_name" {
   description = "Owner of the asset or resource in the cloud"
   type        = string

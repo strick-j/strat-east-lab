@@ -18,7 +18,6 @@ module "s3_bucket" {
   bucket_name        = "${lower(var.alias)}-automation"
   s3_vpc_endpoint_id = module.vpc.s3_vpc_endpoint_id
   aws_region         = var.aws_region
-  aws_profile        = var.aws_profile
   trusted_ips        = var.trusted_ips
 }
 
