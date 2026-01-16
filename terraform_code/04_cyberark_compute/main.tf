@@ -88,6 +88,10 @@ resource "idsec_pcloud_account" "ubuntu_sia_ssh_key" {
   secret_type = "key"
 
   depends_on = [aws_instance.ubuntu_sia_connector]
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 # =====================================================================
