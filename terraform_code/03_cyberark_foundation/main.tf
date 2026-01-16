@@ -1,6 +1,3 @@
-
-data "aws_caller_identity" "current" {}
-
 # =====================================================================
 # REMOTE STATE - Foundation Layer
 # =====================================================================
@@ -18,11 +15,11 @@ data "terraform_remote_state" "aws_foundation" {
 # CyberArk Identity Security - CMGR Resources
 # =====================================================================
 resource "idsec_cmgr_network" "cmgr_network" {
-  name = "${var.alias}"
+  name = var.alias
 }
 
 resource "idsec_cmgr_pool" "cmgr_pool" {
-  name                 = "${var.alias}"
+  name                 = var.alias
   description          = "Pool created by Terraform for Strat East Lab"
   assigned_network_ids = [idsec_cmgr_network.cmgr_network.network_id]
 }
@@ -70,6 +67,16 @@ resource "idsec_identity_role" "database_admins" {
 resource "idsec_identity_role" "database_users" {
   role_name   = "TF ${var.alias} Database Users"
   description = "Role for Database users with standard safe permissions"
+}
+
+resource "idsec_identity_role" "k8s_admins" {
+  role_name   = "TF ${var.alias} K8s Admins"
+  description = "Role for Kubernetes administrators with elevated safe permissions"
+}
+
+resource "idsec_identity_role" "k8s_users" {
+  role_name   = "TF ${var.alias} K8s Users"
+  description = "Role for Kubernetes users with standard safe permissions"
 }
 
 data "idsec_identity_role" "sia_ephemeral_role" {
@@ -166,6 +173,35 @@ resource "idsec_pcloud_safe_member" "database_sia_ephemeral" {
   member_type    = "Role"
   permission_set = "read_only"
 }
+
+resource "idsec_pcloud_safe" "k8s_accounts_safe" {
+  safe_name                    = "TF-${upper(var.alias)}-K8S"
+  description                  = "Safe for storing Kubernetes privileged accounts"
+  managing_cpm                 = var.managing_cpm
+  number_of_versions_retention = 0
+}
+
+resource "idsec_pcloud_safe_member" "k8s_admins" {
+  safe_id        = idsec_pcloud_safe.k8s_accounts_safe.safe_id
+  member_name    = idsec_identity_role.k8s_admins.role_name
+  member_type    = "Role"
+  permission_set = "full"
+}
+
+resource "idsec_pcloud_safe_member" "k8s_users" {
+  safe_id        = idsec_pcloud_safe.k8s_accounts_safe.safe_id
+  member_name    = idsec_identity_role.k8s_users.role_name
+  member_type    = "Role"
+  permission_set = "connect_only"
+}
+
+resource "idsec_pcloud_safe_member" "k8s_sia_ephemeral" {
+  safe_id        = idsec_pcloud_safe.k8s_accounts_safe.safe_id
+  member_name    = data.idsec_identity_role.sia_ephemeral_role.role_name
+  member_type    = "Role"
+  permission_set = "read_only"
+}
+
 # =====================================================================
 # CyberArk Privilege Cloud - Safe for SIA Strong Accounts
 # =====================================================================
