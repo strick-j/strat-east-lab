@@ -1,43 +1,14 @@
 # ===========================
-# AWS Variables
+# Identity Variables
 # ===========================
-variable "statefile_bucket_name" {
-  description = "Name of the S3 bucket to read the remote state from"
+variable "alias" {
+  description = "Short alias identifier for naming resources (e.g., 'Papaya', 'Mango')"
   type        = string
 }
 
-variable "aws_region" {
-  description = "AWS cloud region for the deployment"
-  type        = string
-}
-
-variable "aws_account_id" {
-  description = "AWS Account ID"
-  type        = string
-}
-
-variable "aws_profile" {
-  description = "AWS CLI profile to use"
-  type        = string
-  default     = "default"
-}
-
-# ===========================
-# Identity User Variables
-# ===========================
-variable "users" {
-  description = "List of Users to add"
-  type = list(object({
-    first_name   = string
-    last_name    = string
-    email        = string
-    mobile_number = string
-  }))
-}
-
-variable "domain_name" {
-  description = "Domain name for Identity users"
-  type        = string
+variable "role_purpose" {
+  description = "Purpose of the Identity Roles being created"
+  type        = list(string)
 }
 
 # ===========================

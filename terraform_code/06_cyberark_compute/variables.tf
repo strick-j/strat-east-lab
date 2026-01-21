@@ -32,19 +32,16 @@ variable "asset_owner_name" {
 variable "iScheduler" {
   description = "Instance scheduler tag for automated shutdown"
   type        = string
-  default     = "US_E_office"
 }
 
 variable "instance_type" {
   description = "EC2 instance type for Ubuntu SIA connector"
   type        = string
-  default     = "t3a.small"
 }
 
 variable "ubuntu_username" {
   description = "Default username for Ubuntu AMI"
   type        = string
-  default     = "ubuntu"
 }
 
 # ===========================
@@ -53,7 +50,6 @@ variable "ubuntu_username" {
 variable "conjur_appliance_url" {
   description = "URL of the Conjur appliance"
   type        = string
-  default     = "https://murphyslab.secretsmgr.cyberark.cloud/api"
 }
 
 variable "conjur_account" {
@@ -65,7 +61,6 @@ variable "conjur_account" {
 variable "conjur_login" {
   description = "Conjur login name"
   type        = string
-  default     = "host/data/murphys-tf"
 }
 
 variable "conjur_api_key" {
