@@ -17,23 +17,6 @@ variable "aws_account_id" {
 }
 
 # ===========================
-# Generic Variables
-# ===========================
-variable "alias" {
-  description = "Short alias identifier for safe naming (e.g., 'Papaya', 'Mango')"
-  type        = string
-}
-
-# ===========================
-# CyberArk Safe Variables
-# ===========================
-variable "managing_cpm" {
-  description = "The name of the CPM that manages the safe"
-  type        = string
-  default     = "PasswordManager"
-}
-
-# ===========================
 # Conjur Variables
 # ===========================
 variable "conjur_appliance_url" {
