@@ -77,7 +77,7 @@ resource "local_file" "ubuntu_sia_private_key" {
 # Store SSH Private Key in CyberArk Privilege Cloud
 # =====================================================================
 resource "idsec_pcloud_account" "ubuntu_sia_ssh_key" {
-  safe_name   = "${var.prefix}_NIX_LOC_INT"
+  safe_name   = "${var.prefix}-NIX-LOC-INT"
   address     = aws_instance.ubuntu_sia_connector.private_ip
   username    = var.ubuntu_username
   platform_id = "UnixSSHKeys"
@@ -134,7 +134,10 @@ resource "terraform_data" "wait_for_ssh_ubuntu_sia" {
       private_key = file(local_file.ubuntu_sia_private_key.filename)
     }
 
-    inline = ["echo 'connected!'"]
+    inline = [
+      "echo 'Waiting for user data script to finish'",
+      "cloud-init status --wait > /dev/null"
+    ]
   }
 }
 
