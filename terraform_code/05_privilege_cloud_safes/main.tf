@@ -9,7 +9,6 @@ resource "idsec_pcloud_safe" "safes" {
   number_of_days_retention = each.value.retention_days
 }
 
-
 # =====================================================================
 # Read Required Roles
 # =====================================================================
