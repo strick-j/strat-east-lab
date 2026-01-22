@@ -77,7 +77,7 @@ resource "local_file" "ubuntu_sia_private_key" {
 # Store SSH Private Key in CyberArk Privilege Cloud
 # =====================================================================
 resource "idsec_pcloud_account" "ubuntu_sia_ssh_key" {
-  safe_name   = data.terraform_remote_state.cyberark_foundation.outputs.linux_safe_id
+  safe_name   = "${var.prefix}_NIX_LOC_INT"
   address     = aws_instance.ubuntu_sia_connector.private_ip
   username    = var.ubuntu_username
   platform_id = "UnixSSHKeys"
@@ -126,6 +126,18 @@ resource "aws_instance" "ubuntu_sia_connector" {
   }
 }
 
+resource "terraform_data" "wait_for_ssh_ubuntu_sia" {
+  provisioner "remote-exec" {
+    connection {
+      host = aws_instance.ubuntu_sia_connector.private_ip
+      user = "ubuntu"
+      private_key = file(local_file.ubuntu_sia_private_key.filename)
+    }
+
+    inline = ["echo 'connected!'"]
+  }
+}
+
 # =====================================================================
 # CyberArk SIA Connector Installation
 # =====================================================================
@@ -133,7 +145,7 @@ resource "idsec_sia_access_connector" "ubuntu_sia" {
   connector_type    = "AWS"
   connector_os      = "linux"
   connector_pool_id = data.terraform_remote_state.cyberark_foundation.outputs.cmgr_pool_id
-  target_machine    = aws_instance.ubuntu_sia_connector.public_ip
+  target_machine    = aws_instance.ubuntu_sia_connector.private_ip
   username          = var.ubuntu_username
   private_key_path  = local_file.ubuntu_sia_private_key.filename
 

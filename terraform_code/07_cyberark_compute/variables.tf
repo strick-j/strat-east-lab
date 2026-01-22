@@ -24,6 +24,11 @@ variable "alias" {
   type        = string
 }
 
+variable "prefix" {
+  description = "Prefix for naming resources (e.g., 'PAP', 'MNG')"
+  type        = string
+}
+
 variable "asset_owner_name" {
   description = "Name of the asset owner for tagging resources"
   type        = string
