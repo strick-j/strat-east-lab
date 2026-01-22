@@ -35,14 +35,17 @@ The lab environment includes:
 
 ## Module Structure
 
-The project is organized into four sequential deployment modules:
+The project is organized into seven sequential deployment modules:
 
 ```
 terraform_code/
-├── 01_aws_foundation/       # Base AWS infrastructure
-├── 02_aws_security/         # IAM roles and policies
-├── 03_cyberark_foundation/  # CyberArk Identity setup
-└── 04_cyberark_compute/     # Compute resources with SIA
+├── 01_aws_foundation/           # Base AWS infrastructure
+├── 02_aws_security/             # IAM roles and policies
+├── 03_identity_users/           # CyberArk Identity user provisioning
+├── 04_identity_roles/           # CyberArk Identity role management
+├── 05_privilege_cloud_safes/    # Privilege Cloud safe creation and role mapping
+├── 06_cyberark_foundation/      # CyberArk connector and network configuration
+└── 07_cyberark_compute/         # Compute resources with SIA connector
 ```
 
 ### Module 01: AWS Foundation
@@ -77,32 +80,81 @@ Establishes AWS identity and access management:
 - **EC2 ASM Role**: Allows EC2 instances to access Secrets Manager and assume roles
 - **Secrets Hub Onboarding Role**: Integrates AWS account with CyberArk Secrets Hub
 
-### Module 03: CyberArk Foundation
+### Module 03: Identity Users
 
-Configures CyberArk Identity Security platform:
+Provisions CyberArk Identity users:
 
-**Identity Roles** (8 roles)
-- Windows Admins / Windows Users
-- Linux Admins / Linux Users
-- Database Admins / Database Users
-- Kubernetes Admins / Kubernetes Users
-- SIA Ephemeral Access
-- DPA RDP Secrets Access
+- User creation with email and mobile number
+- Configurable domain suffix
+- Lifecycle management for user attributes
+- Automated user provisioning from Conjur secrets
+- Support for multiple users via list variable
 
-**Privilege Cloud Safes** (5 safes)
-- Windows Accounts Safe
-- Linux Accounts Safe
-- Database Accounts Safe
-- Kubernetes Accounts Safe
-- SIA Strong Accounts Safe
+### Module 04: Identity Roles
 
-Each safe includes role-based access control with full, connect-only, and read-only permissions.
+Creates CyberArk Identity roles for access management:
+
+**User Roles** (5 roles)
+- Windows Users
+- Linux Users
+- Database Users
+- Kubernetes Users
+- Cloud Users
+
+**Admin Roles** (5 roles)
+- Windows Admins
+- Linux Admins
+- Database Admins
+- Kubernetes Admins
+- Cloud Admins
+
+**Privilege Cloud Safe Admin Role**
+- Elevated permissions for safe management
+
+All roles follow the naming convention: `{Alias} {Purpose} {Users|Admins}`
+
+### Module 05: Privilege Cloud Safes
+
+Creates Privilege Cloud safes and maps Identity roles to safes:
+
+**Safe Creation** (13 safes)
+- Windows Domain Service Accounts (PAP-WIN-DOM-SVC)
+- Windows Domain Interactive Accounts (PAP-WIN-DOM-INT)
+- Windows Domain Strong Accounts (PAP-WIN-DOM-STR)
+- Windows Local Service Accounts (PAP-WIN-LOC-SVC)
+- Windows Local Interactive Accounts (PAP-WIN-LOC-INT)
+- Windows Local Strong Accounts (PAP-WIN-LOC-STR)
+- Linux Local Accounts (PAP-NIX-LOC-INT)
+- Database Local Accounts (PAP-DB-LOC-INT)
+- Database Strong Accounts (PAP-DB-LOC-STR)
+- Cloud Accounts for GCP (PAP-CLD-GCP-INT)
+- Cloud Accounts for Azure (PAP-CLD-AZR-INT)
+- Cloud Accounts for AWS (PAP-CLD-AWS-INT)
+- Kubernetes Cluster Accounts (PAP-K8S-CLS-INT)
+
+**Role Mapping**
+- User roles mapped to matching safes with `connect_only` permissions
+- Admin roles mapped to matching safes with `full` permissions
+- Safe Admin role mapped to all safes with `full` permissions
+- SIA roles (ephemeral and secrets access) mapped to all safes
+- Automatic mapping based on safe purpose (WIN, NIX, DB, CLD, K8S)
+
+**Examples:**
+- "Papaya Windows Users" → All WIN safes (connect_only)
+- "Papaya Windows Admins" → All WIN safes (full)
+- "Papaya Database Users" → All DB safes (connect_only)
+- "Papaya Database Admins" → All DB safes (full)
+
+### Module 06: CyberArk Foundation
+
+Configures CyberArk connector and network infrastructure:
 
 **Connector Management**
 - Network and pool configuration for AWS resources
 - Pool identifiers based on AWS Account ID and VPC ID
+- Integration with CyberArk Identity platform
 
-### Module 04: CyberArk Compute
+### Module 07: CyberArk Compute
 
 Deploys compute resources with CyberArk integration:
 
@@ -141,14 +193,32 @@ terraform init
 terraform plan
 terraform apply
 
-# Module 3: CyberArk Foundation
-cd ../03_cyberark_foundation
+# Module 3: Identity Users
+cd ../03_identity_users
 terraform init
 terraform plan
 terraform apply
 
-# Module 4: CyberArk Compute
-cd ../04_cyberark_compute
+# Module 4: Identity Roles
+cd ../04_identity_roles
+terraform init
+terraform plan
+terraform apply
+
+# Module 5: Privilege Cloud Safes
+cd ../05_privilege_cloud_safes
+terraform init
+terraform plan
+terraform apply
+
+# Module 6: CyberArk Foundation
+cd ../06_cyberark_foundation
+terraform init
+terraform plan
+terraform apply
+
+# Module 7: CyberArk Compute
+cd ../07_cyberark_compute
 terraform init
 terraform plan
 terraform apply
