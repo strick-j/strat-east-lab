@@ -8,3 +8,13 @@ output "admin_role_ids" {
   value       = { for k, v in idsec_identity_role.admin_roles : k => v.role_id }
 }
 
+output "safe_admin_role_id" {
+  description = "Role ID for the Privilege Cloud Safe Admin role"
+  value       = idsec_identity_role.pcloud_safe_admins.role_id
+}
+
+output "safe_admin_role_name" {
+  description = "Role Name for the Privilege Cloud Safe Admin role"
+  value       = idsec_identity_role.pcloud_safe_admins.role_name
+}
+
