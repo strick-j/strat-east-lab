@@ -7,7 +7,6 @@ data "terraform_remote_state" "aws_foundation" {
     region  = var.aws_region
     bucket  = var.statefile_bucket_name
     key     = "terraform/aws_foundation.tfstate"
-    profile = var.aws_profile
   }
 }
 
@@ -17,7 +16,6 @@ data "terraform_remote_state" "aws_security" {
     region  = var.aws_region
     bucket  = var.statefile_bucket_name
     key     = "terraform/aws_security.tfstate"
-    profile = var.aws_profile
   }
 }
 
@@ -27,7 +25,6 @@ data "terraform_remote_state" "cyberark_foundation" {
     region  = var.aws_region
     bucket  = var.statefile_bucket_name
     key     = "terraform/cyberark_foundation.tfstate"
-    profile = var.aws_profile
   }
 }
 

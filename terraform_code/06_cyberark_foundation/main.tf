@@ -7,7 +7,6 @@ data "terraform_remote_state" "aws_foundation" {
     region  = var.aws_region
     bucket  = var.statefile_bucket_name
     key     = "terraform/aws_foundation.tfstate"
-    profile = var.aws_profile
   }
 }
 
