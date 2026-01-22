@@ -83,6 +83,7 @@ resource "idsec_pcloud_account" "ubuntu_sia_ssh_key" {
   platform_id = "UnixSSHKeys"
   secret      = tls_private_key.ubuntu_sia_key.private_key_pem
   secret_type = "key"
+  name        = "${var.alias}-Ubuntu-SIA-SSH-Key"
 
   depends_on = [aws_instance.ubuntu_sia_connector]
 
@@ -130,7 +131,7 @@ resource "terraform_data" "wait_for_ssh_ubuntu_sia" {
   provisioner "remote-exec" {
     connection {
       host = aws_instance.ubuntu_sia_connector.private_ip
-      user = "ubuntu"
+      user = var.ubuntu_username
       private_key = file(local_file.ubuntu_sia_private_key.filename)
     }
 
