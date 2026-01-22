@@ -16,6 +16,11 @@ variable "aws_account_id" {
   type        = string
 }
 
+variable "alias" {
+  description = "Short alias identifier for naming resources (e.g., 'Papaya', 'Mango')"
+  type        = string
+}
+
 # ===========================
 # Conjur Variables
 # ===========================
