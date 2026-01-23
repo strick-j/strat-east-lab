@@ -19,12 +19,12 @@ data "terraform_remote_state" "aws_security" {
   }
 }
 
-data "terraform_remote_state" "cyberark_foundation" {
+data "terraform_remote_state" "cyberark_compute" {
   backend = "s3"
   config = {
     region = var.aws_region
     bucket = var.statefile_bucket_name
-    key    = "terraform/cyberark_foundation.tfstate"
+    key    = "terraform/cyberark_compute.tfstate"
   }
 }
 
@@ -53,7 +53,7 @@ resource "aws_instance" "ubuntu_sia_target" {
   ami                  = data.aws_ami.ubuntu.id
   instance_type        = var.instance_type
   subnet_id            = data.terraform_remote_state.aws_foundation.outputs.private_subnet_id
-  key_name             = data.terraform_remote_state.cyberark_foundation.outputs.ssh_key_name
+  key_name             = data.terraform_remote_state.cyberark_compute.outputs.key_pair_name
   iam_instance_profile = data.terraform_remote_state.aws_security.outputs.ec2_asm_instance_profile_name
   vpc_security_group_ids = [
     data.terraform_remote_state.aws_foundation.outputs.ssh_internal_flat_sg_id,
@@ -81,12 +81,16 @@ resource "aws_instance" "ubuntu_sia_target" {
   }
 }
 
+data "idsec_pcloud_account" "default_private_key" {
+  account_id = data.terraform_remote_state.cyberark_compute.outputs.ssh_key_account_id
+}
+
 resource "terraform_data" "wait_for_ssh_ubuntu_sia" {
   provisioner "remote-exec" {
     connection {
       host        = aws_instance.ubuntu_sia_target.private_ip
       user        = var.ubuntu_username
-      private_key = file(local_file.ubuntu_sia_private_key.filename)
+      private_key = data.idsec_pcloud_account.default_private_key
     }
 
     inline = [
@@ -99,10 +103,6 @@ resource "terraform_data" "wait_for_ssh_ubuntu_sia" {
 # =====================================================================
 # CyberArk SIA Target Configuration
 # =====================================================================
-data "idsec_pcloud_account" "default_private_key" {
-  account_id = data.terraform_remote_state.cyberark_compute.outputs.ssh_key_account_id
-}
-
 resource "idsec_sia_ssh_public_key" "ubuntu_sia_target_configure" {
   target_machine   = aws_instance.ubuntu_sia_target.private_ip
   username         = var.ubuntu_username
@@ -110,7 +110,7 @@ resource "idsec_sia_ssh_public_key" "ubuntu_sia_target_configure" {
 
   depends_on = [
     aws_instance.ubuntu_sia_target,
-    local_file.ubuntu_sia_private_key
+    data.idsec_pcloud_account.default_private_key
   ]
 }
 
