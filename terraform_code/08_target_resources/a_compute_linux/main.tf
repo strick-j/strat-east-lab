@@ -99,10 +99,14 @@ resource "terraform_data" "wait_for_ssh_ubuntu_sia" {
 # =====================================================================
 # CyberArk SIA Target Configuration
 # =====================================================================
+data "idsec_pcloud_account" "default_private_key" {
+  account_id = data.terraform_remote_state.cyberark_compute.outputs.ssh_key_account_id
+}
+
 resource "idsec_sia_ssh_public_key" "ubuntu_sia_target_configure" {
   target_machine   = aws_instance.ubuntu_sia_target.private_ip
   username         = var.ubuntu_username
-  private_key_path = local_file.ubuntu_sia_private_key.filename
+  private_key_path = data.idsec_pcloud_account.default_private_key
 
   depends_on = [
     aws_instance.ubuntu_sia_target,
@@ -114,9 +118,8 @@ resource "idsec_sia_ssh_public_key" "ubuntu_sia_target_configure" {
 # Create Access Policy for SIA Target
 # =====================================================================
 data "idsec_identity_role" "linux_admins_role" {
-  name = "${var.alias} Linux Admins"
+  role_name = "${var.alias} Linux Admins"
 }
-
 
 resource "idsec_policy_vm" "ubuntu_sia_target_policy" {
   metadata = {
@@ -127,10 +130,10 @@ resource "idsec_policy_vm" "ubuntu_sia_target_policy" {
     },
     policy_entitlement = {
       target_category = "VM",
-      location_type   = "FQDN/IP"
+      location_type   = "AWS"
     },
     policy_tags = [],
-    time_zone   = "Asia/Jerusalem"
+    time_zone   = "America/New_York"
   }
   principals = [
     {
