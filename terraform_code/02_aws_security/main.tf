@@ -17,7 +17,7 @@ module "ec2_asm_role" {
 # Key Pair
 # =====================================================================
 module "key_pair" {
-  source = "./key_pair"
-  alias  = var.alias
+  source           = "./key_pair"
+  alias            = var.alias
   asset_owner_name = var.asset_owner_name
 }

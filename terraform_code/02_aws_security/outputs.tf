@@ -11,3 +11,11 @@ output "secrets_hub_onboarding_role_arn" {
   value       = module.secrets_hub_onboarding_role.role_arn
   sensitive   = true
 }
+
+# ===========================
+# Key Pair Outputs
+# ===========================
+output "key_pair_name" {
+  description = "The name of the generated key pair"
+  value       = module.key_pair.key_pair_name
+}
