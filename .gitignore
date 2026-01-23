@@ -37,6 +37,7 @@ override.tf.json
 terraform.rc
 
 #ignore created pem files
+**/.ssh
 *.pem
 
 #ignore zip files

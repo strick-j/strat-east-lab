@@ -14,6 +14,11 @@ variable "alias" {
   type        = string
 }
 
+variable "asset_owner_name" {
+  description = "Name of the asset owner for tagging resources"
+  type        = string
+}
+
 # ===========================
 # IAM Role Variables
 # ===========================

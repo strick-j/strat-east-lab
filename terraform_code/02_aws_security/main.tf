@@ -12,3 +12,12 @@ module "ec2_asm_role" {
   source = "./iam_roles/ec2_asm_role"
   alias  = var.alias
 }
+
+# =====================================================================
+# Key Pair
+# =====================================================================
+module "key_pair" {
+  source = "./key_pair"
+  alias  = var.alias
+  asset_owner_name = var.asset_owner_name
+}

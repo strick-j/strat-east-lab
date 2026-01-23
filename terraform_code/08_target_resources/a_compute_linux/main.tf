@@ -81,16 +81,12 @@ resource "aws_instance" "ubuntu_sia_target" {
   }
 }
 
-data "idsec_pcloud_account" "default_private_key" {
-  account_id = data.terraform_remote_state.cyberark_compute.outputs.ssh_key_account_id
-}
-
 resource "terraform_data" "wait_for_ssh_ubuntu_sia" {
   provisioner "remote-exec" {
     connection {
       host        = aws_instance.ubuntu_sia_target.private_ip
       user        = var.ubuntu_username
-      private_key = data.idsec_pcloud_account.default_private_key
+      private_key = file("${path.module}/../../.ssh/default_ssh_key.pem")
     }
 
     inline = [
@@ -104,9 +100,9 @@ resource "terraform_data" "wait_for_ssh_ubuntu_sia" {
 # CyberArk SIA Target Configuration
 # =====================================================================
 resource "idsec_sia_ssh_public_key" "ubuntu_sia_target_configure" {
-  target_machine   = aws_instance.ubuntu_sia_target.private_ip
-  username         = var.ubuntu_username
-  private_key_path = data.idsec_pcloud_account.default_private_key
+  target_machine = aws_instance.ubuntu_sia_target.private_ip
+  username       = var.ubuntu_username
+  private_key    = file("${path.module}/../../.ssh/default_ssh_key.pem")
 
   depends_on = [
     aws_instance.ubuntu_sia_target,
