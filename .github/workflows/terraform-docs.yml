@@ -1,0 +1,178 @@
+name: Terraform Documentation
+
+on:
+  push:
+    branches:
+      - main
+      - 'claude/**'
+    paths:
+      - 'terraform_code/**'
+      - '.github/workflows/terraform-docs.yml'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'terraform_code/**'
+      - '.github/workflows/terraform-docs.yml'
+  workflow_dispatch:
+
+jobs:
+  terraform-docs-check:
+    name: Check Module Documentation
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        module:
+          - 01_aws_foundation
+          - 02_aws_security
+          - 03_identity_users
+          - 04_identity_roles
+          - 05_privilege_cloud_safes
+          - 06_cyberark_foundation
+          - 07_cyberark_compute
+          - 08_target_resources
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: '1.6.0'
+
+      - name: Initialize Terraform
+        working-directory: terraform_code/${{ matrix.module }}
+        run: terraform init -backend=false
+
+      - name: Check Variable Descriptions
+        working-directory: terraform_code/${{ matrix.module }}
+        run: |
+          echo "Checking variable descriptions in ${{ matrix.module }}..."
+
+          # Find all variable blocks and check for description
+          if grep -l "variable \"" *.tf 2>/dev/null; then
+            missing_desc=0
+
+            # Parse each .tf file for variables without descriptions
+            for file in *.tf; do
+              if [ -f "$file" ]; then
+                # Use awk to find variables without descriptions
+                awk '
+                  /^variable "[^"]+"/ {
+                    var_name = $0
+                    gsub(/.*variable "/, "", var_name)
+                    gsub(/".*/, "", var_name)
+                    in_var = 1
+                    has_desc = 0
+                    brace_count = 0
+                  }
+                  in_var && /{/ { brace_count++ }
+                  in_var && /}/ {
+                    brace_count--
+                    if (brace_count == 0) {
+                      if (!has_desc) {
+                        print "WARNING: Variable \"" var_name "\" in " FILENAME " is missing description"
+                      }
+                      in_var = 0
+                    }
+                  }
+                  in_var && /description/ { has_desc = 1 }
+                ' "$file"
+              fi
+            done
+          fi
+
+          echo "Variable description check completed for ${{ matrix.module }}"
+
+      - name: Check Output Descriptions
+        working-directory: terraform_code/${{ matrix.module }}
+        run: |
+          echo "Checking output descriptions in ${{ matrix.module }}..."
+
+          if grep -l "output \"" *.tf 2>/dev/null; then
+            for file in *.tf; do
+              if [ -f "$file" ]; then
+                awk '
+                  /^output "[^"]+"/ {
+                    out_name = $0
+                    gsub(/.*output "/, "", out_name)
+                    gsub(/".*/, "", out_name)
+                    in_out = 1
+                    has_desc = 0
+                    brace_count = 0
+                  }
+                  in_out && /{/ { brace_count++ }
+                  in_out && /}/ {
+                    brace_count--
+                    if (brace_count == 0) {
+                      if (!has_desc) {
+                        print "WARNING: Output \"" out_name "\" in " FILENAME " is missing description"
+                      }
+                      in_out = 0
+                    }
+                  }
+                  in_out && /description/ { has_desc = 1 }
+                ' "$file"
+              fi
+            done
+          fi
+
+          echo "Output description check completed for ${{ matrix.module }}"
+
+  validate-readme:
+    name: Validate README
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Check README Exists
+        run: |
+          if [ ! -f "README.md" ]; then
+            echo "::error::README.md is missing"
+            exit 1
+          fi
+          echo "README.md found"
+
+      - name: Validate README Content
+        run: |
+          echo "Validating README.md structure..."
+
+          # Check for essential sections
+          sections=("Prerequisites" "Usage" "Module")
+          missing_sections=()
+
+          for section in "${sections[@]}"; do
+            if ! grep -qi "## .*$section\|# .*$section" README.md; then
+              missing_sections+=("$section")
+            fi
+          done
+
+          if [ ${#missing_sections[@]} -gt 0 ]; then
+            echo "::warning::README.md may be missing sections: ${missing_sections[*]}"
+          fi
+
+          echo "README validation completed"
+
+      - name: Check for Broken Links
+        uses: gaurav-nelson/github-action-markdown-link-check@v1
+        with:
+          use-quiet-mode: 'yes'
+          config-file: '.github/workflows/mlc_config.json'
+        continue-on-error: true
+
+  docs-summary:
+    name: Documentation Summary
+    runs-on: ubuntu-latest
+    needs: [terraform-docs-check, validate-readme]
+    if: always()
+    steps:
+      - name: Summary
+        run: |
+          echo "## Documentation Check Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Check | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Module Documentation | ${{ needs.terraform-docs-check.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| README Validation | ${{ needs.validate-readme.result }} |" >> $GITHUB_STEP_SUMMARY

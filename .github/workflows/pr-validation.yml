@@ -1,0 +1,184 @@
+name: Pull Request Validation
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'terraform_code/**'
+  workflow_dispatch:
+
+env:
+  TF_VERSION: '1.6.0'
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    outputs:
+      modules: ${{ steps.filter.outputs.modules }}
+      modules_list: ${{ steps.filter.outputs.modules_list }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Detect Changed Modules
+        id: filter
+        run: |
+          # Get list of changed files
+          if [ "${{ github.event_name }}" == "pull_request" ]; then
+            CHANGED_FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD)
+          else
+            CHANGED_FILES=$(git diff --name-only HEAD~1)
+          fi
+
+          echo "Changed files:"
+          echo "$CHANGED_FILES"
+
+          # Extract unique module directories
+          MODULES=$(echo "$CHANGED_FILES" | grep "^terraform_code/" | cut -d'/' -f2 | sort -u | grep -E "^[0-9]{2}_" || true)
+
+          if [ -z "$MODULES" ]; then
+            echo "No Terraform module changes detected"
+            echo "modules=false" >> $GITHUB_OUTPUT
+            echo "modules_list=[]" >> $GITHUB_OUTPUT
+          else
+            echo "Changed modules:"
+            echo "$MODULES"
+            echo "modules=true" >> $GITHUB_OUTPUT
+
+            # Convert to JSON array
+            JSON_ARRAY=$(echo "$MODULES" | jq -R -s -c 'split("\n") | map(select(length > 0))')
+            echo "modules_list=$JSON_ARRAY" >> $GITHUB_OUTPUT
+          fi
+
+  validate-changed:
+    name: Validate Changed Modules
+    runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.modules == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        module: ${{ fromJson(needs.changes.outputs.modules_list) }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Setup TFLint
+        uses: terraform-linters/setup-tflint@v4
+        with:
+          tflint_version: v0.50.0
+
+      - name: Terraform Format Check
+        working-directory: terraform_code/${{ matrix.module }}
+        run: terraform fmt -check -diff
+        continue-on-error: true
+
+      - name: Terraform Init
+        working-directory: terraform_code/${{ matrix.module }}
+        run: terraform init -backend=false
+
+      - name: Terraform Validate
+        working-directory: terraform_code/${{ matrix.module }}
+        run: terraform validate
+
+      - name: Initialize TFLint
+        working-directory: terraform_code
+        run: tflint --init
+
+      - name: TFLint
+        working-directory: terraform_code/${{ matrix.module }}
+        run: tflint --config=../.tflint.hcl --format=compact
+
+  security-quick:
+    name: Quick Security Scan
+    runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.modules == 'true'
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Run TFSec
+        uses: aquasecurity/tfsec-action@v1.0.3
+        with:
+          working_directory: terraform_code
+          soft_fail: true
+          format: lovely
+
+  pr-comment:
+    name: PR Summary Comment
+    runs-on: ubuntu-latest
+    needs: [changes, validate-changed, security-quick]
+    if: always() && github.event_name == 'pull_request'
+    steps:
+      - name: Create PR Comment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const pull_number = context.issue.number;
+
+            const changesResult = '${{ needs.changes.result }}';
+            const validateResult = '${{ needs.validate-changed.result }}';
+            const securityResult = '${{ needs.security-quick.result }}';
+            const modulesChanged = '${{ needs.changes.outputs.modules }}';
+
+            let body = '## Terraform Validation Summary\n\n';
+
+            if (modulesChanged === 'false') {
+              body += '> No Terraform module changes detected in this PR.\n';
+            } else {
+              body += '| Check | Status |\n';
+              body += '|-------|--------|\n';
+              body += `| Module Detection | ${changesResult === 'success' ? '✅ Pass' : '❌ Fail'} |\n`;
+              body += `| Terraform Validate | ${validateResult === 'success' ? '✅ Pass' : validateResult === 'skipped' ? '⏭️ Skipped' : '❌ Fail'} |\n`;
+              body += `| Security Scan | ${securityResult === 'success' ? '✅ Pass' : securityResult === 'skipped' ? '⏭️ Skipped' : '⚠️ Warnings'} |\n`;
+              body += '\n';
+
+              const modulesList = JSON.parse('${{ needs.changes.outputs.modules_list }}' || '[]');
+              if (modulesList.length > 0) {
+                body += '### Changed Modules\n';
+                modulesList.forEach(m => body += `- \`${m}\`\n`);
+              }
+            }
+
+            body += '\n---\n*Automated by GitHub Actions*';
+
+            // Find existing comment
+            const { data: comments } = await github.rest.issues.listComments({
+              owner,
+              repo,
+              issue_number: pull_number,
+            });
+
+            const botComment = comments.find(comment =>
+              comment.user.type === 'Bot' &&
+              comment.body.includes('Terraform Validation Summary')
+            );
+
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                owner,
+                repo,
+                comment_id: botComment.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number: pull_number,
+                body,
+              });
+            }
