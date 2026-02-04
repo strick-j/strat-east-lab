@@ -4,16 +4,20 @@ A comprehensive Terraform infrastructure-as-code project that deploys an integra
 
 ## Overview
 
-This project demonstrates how to build a secure, enterprise-grade lab environment that combines AWS infrastructure with CyberArk's identity and privilege access management solutions. The infrastructure is deployed in a modular, stage-gated approach that ensures dependencies are properly managed.
+This project demonstrates how to build a secure, enterprise-grade lab environment that combines AWS infrastructure with CyberArk's identity and privilege access management solutions. The infrastructure is deployed in a modular approach organized by domain (AWS and CyberArk), with cross-module dependencies managed through S3-backed remote state.
 
 ## Architecture
 
 The lab environment includes:
 
-- **AWS Foundation**: VPC networking with public/private subnets, NAT Gateway, security groups, and S3 storage
-- **AWS Security**: IAM roles and policies for EC2 and CyberArk Secrets Hub integration
-- **CyberArk Foundation**: Identity roles, Privilege Cloud safes, and credential management infrastructure
-- **CyberArk Compute**: EC2 instances with Secure Infrastructure Access (SIA) connector integration
+- **AWS Networking**: VPC with public/private subnets, NAT Gateway, VPC peering, and S3 VPC endpoint
+- **AWS Security**: Security groups, IAM roles, SSH key pair management
+- **AWS Storage**: S3 bucket for automation artifacts with access restrictions
+- **AWS Compute**: Windows and Linux target instances, SIA connectors, and Domain Controller
+- **AWS RDS**: PostgreSQL database instances
+- **CyberArk Identity**: User provisioning and role-based access management
+- **CyberArk Privilege Cloud**: Safe creation with automated role-to-safe permission mapping
+- **CyberArk CMGR**: Connector management network and pool configuration
 
 ## Prerequisites
 
@@ -24,145 +28,155 @@ The lab environment includes:
 - CyberArk Identity tenant and API credentials
 
 ### Required Access
-- AWS account with permissions to create VPCs, EC2 instances, IAM roles, and S3 buckets
+- AWS account with permissions to create VPCs, EC2 instances, IAM roles, S3 buckets, and RDS instances
 - CyberArk Identity tenant with administrative access
 - CyberArk Privilege Cloud access (for safe and account management)
 
 ### Provider Versions
 - AWS Provider: ~> 5.36
-- CyberArk Identity Security Provider: ~> 0.1.8
+- CyberArk Identity Security Provider: ~> 0.1.12
 - Conjur Provider: ~> 0.8.1
 
 ## Module Structure
 
-The project is organized into seven sequential deployment modules:
+The project is organized into two top-level domains with hierarchical sub-modules:
 
 ```
 terraform_code/
-├── 01_aws_foundation/           # Base AWS infrastructure
-├── 02_aws_security/             # IAM roles and policies
-├── 03_identity_users/           # CyberArk Identity user provisioning
-├── 04_identity_roles/           # CyberArk Identity role management
-├── 05_privilege_cloud_safes/    # Privilege Cloud safe creation and role mapping
-├── 06_cyberark_foundation/      # CyberArk connector and network configuration
-└── 07_cyberark_compute/         # Compute resources with SIA connector
+├── .tflint.hcl                              # TFLint code quality configuration
+├── aws/                                     # AWS infrastructure
+│   ├── networking/                          # VPC, subnets, routing, peering
+│   │   └── vpc/                             #   Core VPC child module
+│   ├── security/                            # Security groups, IAM, key pairs
+│   │   ├── iam_roles/
+│   │   │   ├── ec2_asm_role/                #   EC2 Secrets Manager access role
+│   │   │   └── secrets_hub_onboarding_role/ #   CyberArk Secrets Hub integration role
+│   │   ├── key_pair/                        #   SSH key pair generation
+│   │   └── security_groups/                 #   Network access control groups
+│   ├── storage/                             # S3 bucket for automation artifacts
+│   │   └── s3/                              #   S3 child module
+│   ├── compute/
+│   │   ├── shared/
+│   │   │   └── dc/                          #   Windows Domain Controller
+│   │   ├── targets/
+│   │   │   ├── linux/                       #   Ubuntu 22.04 SIA target instances
+│   │   │   └── windows/                     #   Windows Server 2025 SIA target instances
+│   │   └── cyberark/
+│   │       ├── linux_connector/             #   Linux SIA connector instances
+│   │       └── windows_connector/           #   Windows SIA connector instances
+│   └── rds/
+│       └── postgres/                        #   PostgreSQL RDS instances
+└── cyberark/                                # CyberArk platform configuration
+    ├── identity/
+    │   ├── users/                           #   Identity user provisioning
+    │   └── roles/                           #   Identity role management
+    ├── pcloud/
+    │   └── safes/                           #   Privilege Cloud safes + role mapping
+    └── cmgr/                                #   Connector management (networks/pools)
 ```
 
-### Module 01: AWS Foundation
+### aws/networking
 
-Creates the foundational AWS infrastructure including:
+Creates the foundational AWS networking infrastructure:
 
-**Networking**
-- VPC with configurable CIDR (default: 192.168.0.0/16)
-- Public subnet (192.168.50.0/24) in us-east-2a
-- Private subnet (192.168.20.0/24) in us-east-2b
+- VPC with configurable CIDR
+- Public and private subnets across availability zones (including a second private subnet for DB subnet groups)
 - Internet Gateway and NAT Gateway
 - Route tables with S3 VPC endpoint
-- DHCP options for domain integration
+- DHCP options for Active Directory domain integration
+- VPC peering support
+- Database subnet group for RDS
 
-**Security Groups**
-- SSH/RDP access (external and internal)
-- WinRM for Windows management
-- HTTPS and Jenkins web access
-- Domain Controller (Active Directory/DNS ports)
-- Database access (MySQL, PostgreSQL, MSSQL)
-- SIA Windows target access
+### aws/security
 
-**Storage**
-- S3 bucket for automation artifacts
-- Public access blocked
-- VPC endpoint and trusted IP restrictions
+Establishes security controls and access management:
 
-### Module 02: AWS Security
-
-Establishes AWS identity and access management:
-
+- **Security Groups**: SSH, RDP, WinRM, HTTPS, Jenkins, Domain Controller (AD/DNS), database (MySQL, PostgreSQL, MSSQL), and SIA Windows target access
 - **EC2 ASM Role**: Allows EC2 instances to access Secrets Manager and assume roles
 - **Secrets Hub Onboarding Role**: Integrates AWS account with CyberArk Secrets Hub
+- **Key Pair**: TLS RSA 4096-bit SSH key pair generation with local file storage
 
-### Module 03: Identity Users
+### aws/storage
 
-Provisions CyberArk Identity users:
+Provides S3-based storage for automation artifacts:
 
+- S3 bucket with public access blocked
+- VPC endpoint and trusted IP restrictions
+
+### aws/compute
+
+Deploys EC2 instances across several categories:
+
+**Shared Infrastructure** (`shared/dc/`)
+- Windows Server 2025 Domain Controller with static private IP
+- IMDSv2 enforcement, encrypted 50GB gp3 root volume
+
+**Target Instances** (`targets/`)
+- **Linux** (`targets/linux/`): Ubuntu 22.04 LTS instances in private subnet for SIA targeting
+- **Windows** (`targets/windows/`): Windows Server 2025 instances with auto-generated local admin password and user data script
+
+**CyberArk SIA Connectors** (`cyberark/`)
+- **Linux Connector** (`cyberark/linux_connector/`): Ubuntu 22.04 LTS instances for SIA access connector
+- **Windows Connector** (`cyberark/windows_connector/`): Windows Server 2025 instances for SIA access connector
+
+All compute instances use encrypted gp3 root volumes, IMDSv2 enforcement, and CloudApper scheduling tags.
+
+### aws/rds
+
+Deploys managed database services:
+
+- **PostgreSQL** (`postgres/`): RDS instance with auto-generated admin password, storage encryption, configurable backup retention, and database subnet group placement
+
+### cyberark/identity
+
+Manages CyberArk Identity platform resources:
+
+**Users** (`users/`)
 - User creation with email and mobile number
 - Configurable domain suffix
-- Lifecycle management for user attributes
 - Automated user provisioning from Conjur secrets
-- Support for multiple users via list variable
 
-### Module 04: Identity Roles
+**Roles** (`roles/`)
+- **User Roles** (5): Windows, Linux, Database, Kubernetes, and Cloud Users
+- **Admin Roles** (5): Windows, Linux, Database, Kubernetes, and Cloud Admins
+- **Safe Admin Role**: Elevated permissions for safe management
+- Naming convention: `{Alias} {Purpose} {Users|Admins}`
 
-Creates CyberArk Identity roles for access management:
+### cyberark/pcloud
 
-**User Roles** (5 roles)
-- Windows Users
-- Linux Users
-- Database Users
-- Kubernetes Users
-- Cloud Users
+Manages CyberArk Privilege Cloud resources:
 
-**Admin Roles** (5 roles)
-- Windows Admins
-- Linux Admins
-- Database Admins
-- Kubernetes Admins
-- Cloud Admins
+**Safes** (`safes/`) - Creates 13 safes with automated role-to-safe mapping:
 
-**Privilege Cloud Safe Admin Role**
-- Elevated permissions for safe management
+| Safe | Short Name | Description |
+|------|-----------|-------------|
+| PAP-WIN-DOM-SVC | Windows Domain Service | Domain service accounts |
+| PAP-WIN-DOM-INT | Windows Domain Interactive | Domain interactive accounts |
+| PAP-WIN-DOM-STR | Windows Domain Strong | Domain strong accounts |
+| PAP-WIN-LOC-SVC | Windows Local Service | Local service accounts |
+| PAP-WIN-LOC-INT | Windows Local Interactive | Local interactive accounts |
+| PAP-WIN-LOC-STR | Windows Local Strong | Local strong accounts |
+| PAP-NIX-LOC-INT | Linux Local | Local Linux accounts |
+| PAP-DB-LOC-INT | Database Local | Local database accounts |
+| PAP-DB-LOC-STR | Database Strong | Strong database accounts |
+| PAP-CLD-GCP-INT | Cloud GCP | GCP cloud accounts |
+| PAP-CLD-AZR-INT | Cloud Azure | Azure cloud accounts |
+| PAP-CLD-AWS-INT | Cloud AWS | AWS cloud accounts |
+| PAP-K8S-CLS-INT | Kubernetes Cluster | Kubernetes cluster accounts |
 
-All roles follow the naming convention: `{Alias} {Purpose} {Users|Admins}`
-
-### Module 05: Privilege Cloud Safes
-
-Creates Privilege Cloud safes and maps Identity roles to safes:
-
-**Safe Creation** (13 safes)
-- Windows Domain Service Accounts (PAP-WIN-DOM-SVC)
-- Windows Domain Interactive Accounts (PAP-WIN-DOM-INT)
-- Windows Domain Strong Accounts (PAP-WIN-DOM-STR)
-- Windows Local Service Accounts (PAP-WIN-LOC-SVC)
-- Windows Local Interactive Accounts (PAP-WIN-LOC-INT)
-- Windows Local Strong Accounts (PAP-WIN-LOC-STR)
-- Linux Local Accounts (PAP-NIX-LOC-INT)
-- Database Local Accounts (PAP-DB-LOC-INT)
-- Database Strong Accounts (PAP-DB-LOC-STR)
-- Cloud Accounts for GCP (PAP-CLD-GCP-INT)
-- Cloud Accounts for Azure (PAP-CLD-AZR-INT)
-- Cloud Accounts for AWS (PAP-CLD-AWS-INT)
-- Kubernetes Cluster Accounts (PAP-K8S-CLS-INT)
-
-**Role Mapping**
+**Role-to-Safe Mapping:**
 - User roles mapped to matching safes with `connect_only` permissions
 - Admin roles mapped to matching safes with `full` permissions
 - Safe Admin role mapped to all safes with `full` permissions
 - SIA roles (ephemeral and secrets access) mapped to all safes
 - Automatic mapping based on safe purpose (WIN, NIX, DB, CLD, K8S)
 
-**Examples:**
-- "Papaya Windows Users" → All WIN safes (connect_only)
-- "Papaya Windows Admins" → All WIN safes (full)
-- "Papaya Database Users" → All DB safes (connect_only)
-- "Papaya Database Admins" → All DB safes (full)
+### cyberark/cmgr
 
-### Module 06: CyberArk Foundation
+Configures CyberArk Connector Management resources:
 
-Configures CyberArk connector and network infrastructure:
-
-**Connector Management**
 - Network and pool configuration for AWS resources
 - Pool identifiers based on AWS Account ID and VPC ID
-- Integration with CyberArk Identity platform
-
-### Module 07: CyberArk Compute
-
-Deploys compute resources with CyberArk integration:
-
-- Ubuntu 22.04 LTS EC2 instance in private subnet
-- TLS RSA 4096-bit SSH key pair
-- Private key stored in CyberArk Privilege Cloud
-- CyberArk SIA connector installation
-- Encrypted root volume (30GB gp3)
 
 ## Deployment
 
@@ -176,52 +190,62 @@ Each module requires configuration. Create `terraform.tfvars` files or set envir
 - Network CIDR ranges
 - Trusted IP addresses
 
-### Step 2: Deploy Modules Sequentially
+### Step 2: Deploy Modules by Dependency Order
 
-Deploy modules in order, as each depends on outputs from previous modules:
+Modules must be deployed in dependency order. AWS infrastructure modules first, then CyberArk modules:
 
 ```bash
-# Module 1: AWS Foundation
-cd terraform_code/01_aws_foundation
-terraform init
-terraform plan
-terraform apply
+# 1. AWS Networking (foundation - no dependencies)
+cd terraform_code/aws/networking
+terraform init && terraform plan && terraform apply
 
-# Module 2: AWS Security
-cd ../02_aws_security
-terraform init
-terraform plan
-terraform apply
+# 2. AWS Security (depends on: networking)
+cd ../security
+terraform init && terraform plan && terraform apply
 
-# Module 3: Identity Users
-cd ../03_identity_users
-terraform init
-terraform plan
-terraform apply
+# 3. AWS Storage (depends on: networking)
+cd ../storage
+terraform init && terraform plan && terraform apply
 
-# Module 4: Identity Roles
-cd ../04_identity_roles
-terraform init
-terraform plan
-terraform apply
+# 4. AWS Compute - Domain Controller (depends on: networking, security)
+cd ../compute/shared/dc
+terraform init && terraform plan && terraform apply
 
-# Module 5: Privilege Cloud Safes
-cd ../05_privilege_cloud_safes
-terraform init
-terraform plan
-terraform apply
+# 5. AWS Compute - Linux Targets (depends on: networking, security)
+cd ../../targets/linux
+terraform init && terraform plan && terraform apply
 
-# Module 6: CyberArk Foundation
-cd ../06_cyberark_foundation
-terraform init
-terraform plan
-terraform apply
+# 6. AWS Compute - Windows Targets (depends on: networking, security)
+cd ../windows
+terraform init && terraform plan && terraform apply
 
-# Module 7: CyberArk Compute
-cd ../07_cyberark_compute
-terraform init
-terraform plan
-terraform apply
+# 7. AWS Compute - Linux SIA Connector (depends on: networking, security)
+cd ../../cyberark/linux_connector
+terraform init && terraform plan && terraform apply
+
+# 8. AWS Compute - Windows SIA Connector (depends on: networking, security)
+cd ../windows_connector
+terraform init && terraform plan && terraform apply
+
+# 9. AWS RDS - PostgreSQL (depends on: networking, security)
+cd ../../../rds/postgres
+terraform init && terraform plan && terraform apply
+
+# 10. CyberArk Identity Users (independent of AWS)
+cd ../../../../cyberark/identity/users
+terraform init && terraform plan && terraform apply
+
+# 11. CyberArk Identity Roles (depends on: identity/users)
+cd ../roles
+terraform init && terraform plan && terraform apply
+
+# 12. CyberArk Privilege Cloud Safes (depends on: identity/roles)
+cd ../../pcloud/safes
+terraform init && terraform plan && terraform apply
+
+# 13. CyberArk CMGR (depends on: networking)
+cd ../../cmgr
+terraform init && terraform plan && terraform apply
 ```
 
 ### Step 3: Verify Deployment
@@ -232,39 +256,43 @@ After deployment, verify:
 - IAM roles and policies
 - CyberArk Identity roles and safes
 - EC2 instance accessibility through CyberArk SIA
+- RDS database connectivity
 
 ## Configuration
 
 ### Remote State
 
 All modules use S3-backed remote state for dependency management:
-- State files stored in: `s3://bucket-name/terraform/*.tfstate`
-- Enables cross-module data sharing
+- State files stored in: `s3://bucket-name/terraform/aws/{module}/terraform.tfstate`
+- Enables cross-module data sharing via `terraform_remote_state` data sources
 
 ### Naming Convention
 
 Resources follow a consistent naming pattern using a project alias:
-- AWS resources: lowercase alias (e.g., `papaya-vpc`)
-- CyberArk safes: uppercase alias (e.g., `PAPAYA-Windows-Accounts`)
+- AWS resources: lowercase alias (e.g., `papaya-vpc`, `papaya-ubuntu-sia-target-1`)
+- CyberArk safes: uppercase prefix format `{PREFIX}-{PLATFORM}-{SCOPE}-{TYPE}` (e.g., `PAP-WIN-DOM-SVC`)
+- Identity roles: titlecase (e.g., `Papaya Windows Admins`)
 
 ### Security Best Practices
 
 The project implements several security best practices:
-- Private keys with 0600 permissions
-- Encrypted EBS volumes
+- TLS RSA 4096-bit SSH key pair with 0600 permissions
+- Encrypted EBS volumes (gp3)
 - Restricted security group ingress rules
 - Public access blocked on S3 buckets
 - VPC endpoint restrictions
+- IMDSv2 enforcement on EC2 instances
 - Secrets stored in CyberArk Privilege Cloud
+- Auto-generated passwords for Windows local admin and RDS
 
 ### Tagging Strategy
 
 All resources are tagged with:
-- `Owner`: Asset owner contact information
 - `Name`: Descriptive resource name
-- `Project`/`Alias`: Project identifier
-- `Purpose`: Resource intent (I_Purpose tag)
-- CloudApper tags (if applicable)
+- `Project`/`Environment`/`Alias`: Project identifier
+- `I_Owner`/`Owner`: Asset owner contact information
+- `I_Purpose`: Resource intent
+- `CA_iScheduler` / `CA_iSchedulerControl`: CloudApper scheduling tags
 
 ## Code Quality
 
@@ -278,12 +306,12 @@ tflint --recursive
 
 **Enabled Rules:**
 - Terraform recommended preset
-- AWS plugin checks
+- AWS plugin checks (v0.45.0)
 - Naming convention enforcement (snake_case)
 
 ## Technology Stack
 
-- **Infrastructure**: AWS (VPC, EC2, IAM, S3)
+- **Infrastructure**: AWS (VPC, EC2, IAM, S3, RDS)
 - **Identity & Access**: CyberArk Identity Security Platform
 - **Secrets Management**: CyberArk Privilege Cloud, Conjur
 - **Infrastructure as Code**: Terraform >= 1.3.0
@@ -303,7 +331,7 @@ This lab environment is ideal for:
 
 When contributing to this project:
 
-1. Follow the existing module structure
+1. Follow the existing module structure (`aws/` and `cyberark/` domains)
 2. Use snake_case for variables and outputs
 3. Run TFLint before committing
 4. Update module documentation for significant changes
