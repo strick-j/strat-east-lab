@@ -46,16 +46,6 @@ variable "backup_retention" {
   type        = number
   default     = 7
 }
-variable "publicly_accessible" {
-  description = "Specifies whether the RDS PostgreSQL instance is publicly accessible"
-  type        = bool
-  default     = false
-} 
-variable "deletion_protection" {
-  description = "Specifies whether deletion protection is enabled for the RDS PostgreSQL instance"
-  type        = bool
-  default     = false
-}
 variable "allocated_storage" {
   description = "The allocated storage in gigabytes for the RDS PostgreSQL instance"
   type        = number

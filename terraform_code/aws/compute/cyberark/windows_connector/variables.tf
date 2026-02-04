@@ -29,7 +29,3 @@ variable "instance_type" {
   description = "EC2 instance type for Windows target"
   type        = string
 }
-variable "windows_username" {
-  description = "Default username for Windows AMI"
-  type        = string
-}

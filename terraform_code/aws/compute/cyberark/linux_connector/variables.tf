@@ -29,7 +29,3 @@ variable "instance_type" {
   description = "EC2 instance type for Ubuntu SIA connector"
   type        = string
 }
-variable "ubuntu_username" {
-  description = "Default username for Ubuntu AMI"
-  type        = string
-}

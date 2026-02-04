@@ -33,7 +33,3 @@ variable "instance_type" {
   type        = string
 }
 
-variable "windows_username" {
-  description = "Default username for Windows AMI"
-  type        = string
-}
