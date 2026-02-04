@@ -16,7 +16,7 @@ variable "alias" {
 variable "asset_owner_name" {
   description = "Name of the asset owner for tagging resources"
   type        = string
-} 
+}
 
 # ===========================
 # S3 Variables
