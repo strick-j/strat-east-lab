@@ -10,39 +10,75 @@ This document provides context for Claude AI assistant when working with this re
 
 ## Project Structure
 
-This project uses a **modular, stage-gated deployment approach** with 7 sequential Terraform modules:
+This project uses a **domain-based modular deployment approach** with two top-level domains (`aws/` and `cyberark/`), each containing hierarchical sub-modules:
 
 ```
 terraform_code/
-├── 01_aws_foundation/           # AWS VPC, subnets, security groups, S3
-├── 02_aws_security/             # IAM roles and policies
-├── 03_identity_users/           # CyberArk Identity user provisioning
-├── 04_identity_roles/           # CyberArk Identity role management
-├── 05_privilege_cloud_safes/    # Privilege Cloud safes + role-to-safe mapping
-├── 06_cyberark_foundation/      # CyberArk connector and network config
-└── 07_cyberark_compute/         # EC2 instances with SIA connector
+├── .tflint.hcl                              # TFLint code quality config
+├── aws/                                     # AWS infrastructure
+│   ├── networking/                          # VPC, subnets, routing, peering
+│   │   └── vpc/                             #   Core VPC child module
+│   ├── security/                            # Security groups, IAM, key pairs
+│   │   ├── iam_roles/
+│   │   │   ├── ec2_asm_role/                #   EC2 Secrets Manager access role
+│   │   │   └── secrets_hub_onboarding_role/ #   CyberArk Secrets Hub integration role
+│   │   ├── key_pair/                        #   SSH key pair generation
+│   │   └── security_groups/                 #   Network access control groups
+│   ├── storage/                             # S3 bucket for automation artifacts
+│   │   └── s3/                              #   S3 child module
+│   ├── compute/
+│   │   ├── shared/dc/                       #   Windows Domain Controller
+│   │   ├── targets/linux/                   #   Ubuntu 22.04 SIA target instances
+│   │   ├── targets/windows/                 #   Windows Server 2025 SIA target instances
+│   │   └── cyberark/
+│   │       ├── linux_connector/             #   Linux SIA connector instances
+│   │       └── windows_connector/           #   Windows SIA connector instances
+│   └── rds/
+│       └── postgres/                        #   PostgreSQL RDS instances
+└── cyberark/                                # CyberArk platform configuration
+    ├── identity/
+    │   ├── users/                           #   Identity user provisioning
+    │   └── roles/                           #   Identity role management
+    ├── pcloud/
+    │   └── safes/                           #   Privilege Cloud safes + role mapping
+    └── cmgr/                                #   Connector management (networks/pools)
 ```
 
 ### Module Dependencies
 
-Modules must be deployed in order due to dependencies:
-- Modules 03-07 depend on remote state from previous modules
-- Module 05 references role data from module 04 via Terraform remote state
-- Module 06 uses outputs from module 01 (AWS Foundation)
-- Module 07 depends on outputs from modules 01, 02, and 06
+Modules must be deployed respecting their dependency chains:
+
+**AWS Foundation Layer** (deploy first):
+1. `aws/networking` — No dependencies (foundation)
+2. `aws/security` — Depends on: `aws/networking`
+3. `aws/storage` — Depends on: `aws/networking`
+
+**AWS Compute Layer** (depends on foundation):
+4. `aws/compute/shared/dc` — Depends on: `aws/networking`, `aws/security`
+5. `aws/compute/targets/linux` — Depends on: `aws/networking`, `aws/security`
+6. `aws/compute/targets/windows` — Depends on: `aws/networking`, `aws/security`
+7. `aws/compute/cyberark/linux_connector` — Depends on: `aws/networking`, `aws/security`
+8. `aws/compute/cyberark/windows_connector` — Depends on: `aws/networking`, `aws/security`
+9. `aws/rds/postgres` — Depends on: `aws/networking`, `aws/security`
+
+**CyberArk Layer** (sequential):
+10. `cyberark/identity/users` — Independent of AWS modules
+11. `cyberark/identity/roles` — Depends on: `cyberark/identity/users`
+12. `cyberark/pcloud/safes` — Depends on: `cyberark/identity/roles`
+13. `cyberark/cmgr` — Depends on: `aws/networking`
 
 ## Key Architectural Patterns
 
 ### 1. Remote State Management
 All modules use S3-backed Terraform remote state:
-- State files: `s3://bucket-name/terraform/{module_name}.tfstate`
+- State files: `s3://bucket-name/terraform/aws/{module}/terraform.tfstate`
 - Enables cross-module data sharing via `terraform_remote_state`
-- Backend configuration in each module's `backend.tf`
+- Backend configuration in each module's `backend.tf` (gitignored)
 
 ### 2. Naming Conventions
 
 **Project Alias Pattern**:
-- AWS resources: lowercase alias (e.g., `papaya-vpc`)
+- AWS resources: lowercase alias (e.g., `papaya-vpc`, `papaya-ubuntu-sia-target-1`)
 - CyberArk safes: uppercase prefix (e.g., `PAP-WIN-DOM-SVC`)
 - Identity roles: titlecase with alias (e.g., `Papaya Windows Admins`)
 
@@ -55,7 +91,7 @@ All modules use S3-backed Terraform remote state:
 **Role Naming**: `{Alias} {Purpose} {Users|Admins}`
 - Examples: "Papaya Windows Users", "Papaya Database Admins"
 
-### 3. Role-to-Safe Mapping (Module 05)
+### 3. Role-to-Safe Mapping (cyberark/pcloud/safes)
 
 **Critical Pattern**: Automatic mapping between Identity roles and Privilege Cloud safes based on purpose matching.
 
@@ -80,6 +116,24 @@ role_to_safe_mapping = {
 - "Papaya Windows Users" maps to: PAP-WIN-DOM-SVC, PAP-WIN-DOM-INT, PAP-WIN-DOM-STR, PAP-WIN-LOC-SVC, PAP-WIN-LOC-INT, PAP-WIN-LOC-STR (all with `connect_only`)
 - "Papaya Database Admins" maps to: PAP-DB-LOC-INT, PAP-DB-LOC-STR (both with `full`)
 
+### 4. Compute Instance Patterns
+
+All EC2 instances follow common patterns:
+- Encrypted gp3 root volumes
+- IMDSv2 enforcement (`http_tokens = "required"`)
+- CloudApper scheduling tags (`CA_iScheduler`, `CA_iSchedulerControl`)
+- `lifecycle.ignore_changes` for `tags` and `ami` to prevent drift
+- Placement in private subnets via `aws/networking` remote state
+- Key pair and IAM profile from `aws/security` remote state
+
+**Windows instances** additionally use:
+- Auto-generated `random_password` for local admin
+- PowerShell user data templates (`scripts/user_data.tpl`)
+- Windows Server 2025 Datacenter AMI
+
+**Linux instances** use:
+- Ubuntu 22.04 LTS (Jammy) AMI from Canonical
+
 ## Important Configuration Files
 
 ### Variable Files
@@ -91,18 +145,19 @@ Each module has:
 ### Provider Configuration
 Standard providers across modules:
 - AWS Provider: ~> 5.36
-- CyberArk Identity Security (idsec): ~> 0.1.11+
+- CyberArk Identity Security (idsec): ~> 0.1.12
 - Conjur Provider: ~> 0.8.1
 
 ### Sensitive Data Handling
 - Conjur API keys and paths stored in `default.tfvars` (development only)
 - Production deployments should use environment variables or secure secret management
-- Private keys stored in CyberArk Privilege Cloud, not local filesystem
+- Private keys stored locally at `aws/security/.ssh/default_ssh_key.pem` with 0600 permissions
+- Windows admin passwords auto-generated via `random_password` resource
 
 ## Common Tasks & Patterns
 
 ### Adding a New Safe
-1. Edit `terraform_code/05_privilege_cloud_safes/default.tfvars`
+1. Edit `terraform_code/cyberark/pcloud/safes/default.tfvars`
 2. Add safe definition to `safe_purpose` list with required attributes:
    ```hcl
    {
@@ -116,17 +171,23 @@ Standard providers across modules:
 3. Role mappings are automatic based on `short_name` matching
 
 ### Adding a New Role Purpose
-1. Edit `terraform_code/04_identity_roles/default.tfvars`
+1. Edit `terraform_code/cyberark/identity/roles/default.tfvars`
 2. Add purpose to `role_purpose` list (e.g., "Storage")
-3. Edit `terraform_code/05_privilege_cloud_safes/main.tf`
+3. Edit `terraform_code/cyberark/pcloud/safes/main.tf`
 4. Add mapping to `locals.role_to_safe_mapping` (e.g., "Storage" = "STR")
 5. Creates both User and Admin roles automatically
 
+### Adding a New Compute Module
+1. Create directory under appropriate category: `aws/compute/targets/`, `aws/compute/cyberark/`, or `aws/compute/shared/`
+2. Add `main.tf`, `variables.tf`, `outputs.tf`, `provider.tf`
+3. Reference remote state from `aws/networking` and `aws/security`
+4. Follow existing instance patterns (encrypted volumes, IMDSv2, scheduling tags)
+
 ### Modifying Safe Permissions
-Located in `terraform_code/05_privilege_cloud_safes/main.tf`:
-- `user_role_mappings` - Line ~107 (connect_only)
-- `admin_role_mappings` - Line ~122 (full)
-- `safe_admin_mapping` - Line ~43 (full for safe admins)
+Located in `terraform_code/cyberark/pcloud/safes/main.tf`:
+- `user_role_mappings` (connect_only)
+- `admin_role_mappings` (full)
+- `safe_admin_mapping` (full for safe admins)
 
 ## Code Quality Standards
 
@@ -144,20 +205,18 @@ Follow Conventional Commits pattern:
 - `docs:` - Documentation updates
 - `chore:` - Maintenance tasks
 
-Include "Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>" in commit messages when Claude assists.
-
 ### TFLint
 Project includes TFLint configuration:
 ```bash
 tflint --recursive
 ```
-Enabled rules: Terraform recommended, AWS plugin, snake_case naming
+Enabled rules: Terraform recommended, AWS plugin (v0.45.0), snake_case naming
 
 ## Common Pitfalls & Solutions
 
 ### 1. Module Deployment Order
 **Problem**: Applying modules out of order causes errors
-**Solution**: Always deploy sequentially: 01 → 02 → 03 → 04 → 05 → 06 → 07
+**Solution**: Deploy in dependency order. AWS foundation first (networking → security → storage), then compute/RDS, then CyberArk modules
 
 ### 2. Remote State Dependencies
 **Problem**: Module fails to find outputs from previous module
@@ -175,22 +234,35 @@ Enabled rules: Terraform recommended, AWS plugin, snake_case naming
 **Problem**: Terraform wants to recreate resources on every apply
 **Solution**: Check `lifecycle.ignore_changes` blocks - may need to add attributes that change externally
 
+### 6. Key Pair Path References
+**Problem**: Compute modules can't find SSH key
+**Solution**: Ensure `aws/security` has been applied and key file exists at `aws/security/.ssh/default_ssh_key.pem`
+
 ## Terraform State Management
 
 ### State File Locations
 - Bucket: Defined in `statefile_bucket_name` variable
 - Region: Defined in `aws_region` variable
-- Keys: `terraform/{module_name}.tfstate`
+- Keys: `terraform/aws/{module}/terraform.tfstate` for AWS modules
 
 ### State File Dependencies
-Module 05 reads from module 04:
+Compute modules read from networking and security:
 ```hcl
-data "terraform_remote_state" "identity_roles" {
+data "terraform_remote_state" "aws_networking" {
   backend = "s3"
   config = {
     region = var.aws_region
     bucket = var.statefile_bucket_name
-    key    = "terraform/identity_roles.tfstate"
+    key    = "terraform/aws/networking/terraform.tfstate"
+  }
+}
+
+data "terraform_remote_state" "aws_security" {
+  backend = "s3"
+  config = {
+    region = var.aws_region
+    bucket = var.statefile_bucket_name
+    key    = "terraform/aws/security/terraform.tfstate"
   }
 }
 ```
@@ -198,13 +270,15 @@ data "terraform_remote_state" "identity_roles" {
 ## Resource Outputs
 
 ### Key Outputs by Module
-**Module 01**: VPC ID, subnet IDs, security group IDs
-**Module 02**: IAM role ARNs
-**Module 03**: User IDs
-**Module 04**: Role IDs, role names (user_role_ids, admin_role_ids, safe_admin_role_name)
-**Module 05**: Safe IDs, safe names
-**Module 06**: Connector IDs, pool IDs
-**Module 07**: Instance IDs, private IPs
+- **aws/networking**: VPC ID, subnet IDs, subnet CIDRs, db subnet group name, S3 VPC endpoint ID, DNS server IP, peer VPC CIDR
+- **aws/security**: IAM instance profile name, Secrets Hub role ARN, key pair name, security group IDs (SSH, RDP, WinRM, HTTPS, Jenkins, domain controller, database, SIA, MSSQL)
+- **aws/storage**: S3 bucket name, bucket ARN
+- **aws/compute/***: Instance IDs, private IPs
+- **aws/rds/postgres**: RDS endpoint, database name
+- **cyberark/identity/users**: User IDs
+- **cyberark/identity/roles**: Role IDs, role names (user_role_ids, admin_role_ids, safe_admin_role_name)
+- **cyberark/pcloud/safes**: Safe IDs, safe names
+- **cyberark/cmgr**: Connector IDs, pool IDs
 
 ## Testing & Validation
 
@@ -220,6 +294,7 @@ data "terraform_remote_state" "identity_roles" {
 3. Confirm Privilege Cloud safes created
 4. Test safe permissions for roles
 5. Validate EC2 instance accessibility via SIA
+6. Test RDS connectivity from private subnet
 
 ### Terraform Commands
 ```bash
@@ -246,6 +321,7 @@ terraform state list    # List resources in state
 - Security groups follow least-privilege model
 - S3 buckets block public access
 - VPC endpoints reduce internet exposure
+- IMDSv2 required on all EC2 instances
 
 ### Access Control
 - IAM roles use managed policies where possible
@@ -290,7 +366,7 @@ When assisting with this repository:
 
 1. **Always respect module dependencies** - Don't suggest applying modules out of order
 2. **Maintain naming conventions** - Use established patterns for all resources
-3. **Preserve role-to-safe mapping logic** - Don't break the automatic mapping in module 05
+3. **Preserve role-to-safe mapping logic** - Don't break the automatic mapping in cyberark/pcloud/safes
 4. **Check for remote state references** - Ensure outputs are available before referencing
 5. **Follow security best practices** - Don't commit sensitive data, use proper secret management
 6. **Test incrementally** - Suggest `terraform plan` before `terraform apply`
@@ -299,12 +375,17 @@ When assisting with this repository:
 
 ## Recent Changes
 
+### Structure Reorganization (2026-02)
+- Replaced numbered module structure (01-07) with domain-based hierarchy (`aws/` and `cyberark/`)
+- Added new compute sub-modules: `shared/dc`, `targets/windows`, `cyberark/windows_connector`
+- Added `aws/rds/postgres` for PostgreSQL RDS instances
+- Added `aws/security/key_pair` for centralized SSH key management
+- Updated all remote state paths to match new directory structure
+
 ### Module Reorganization (2026-01-22)
-- Separated identity and safe management into dedicated modules (03-05)
-- Renumbered CyberArk foundation and compute to 06-07
-- Implemented intelligent role-to-safe mapping in module 05
+- Separated identity and safe management into dedicated modules
+- Implemented intelligent role-to-safe mapping
 - Added Safe Admin role for elevated safe permissions
-- Removed "TF" prefix from role names
 
 ### Role Mapping Enhancement (2026-01-22)
 - Automated User role → Safe mapping with `connect_only` permissions
