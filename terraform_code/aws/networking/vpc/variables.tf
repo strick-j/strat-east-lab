@@ -1,0 +1,74 @@
+variable "asset_owner_name" {
+  description = "Name of the asset owner for tagging resources"
+  type        = string
+}
+
+variable "aws_region" {
+  description = "AWS cloud region for the deployment"
+  type        = string
+}
+
+variable "peer_owner_id" {
+  description = "AWS Account ID of the peer VPC owner"
+  type        = string
+}
+
+variable "peer_vpc_id" {
+  description = "ID of the peer VPC"
+  type        = string
+}
+
+variable "peer_vpc_cidr" {
+  description = "CIDR block of the peer VPC"
+  type        = string
+}
+
+variable "alias" {
+  description = "Short alias identifier for naming resources (e.g., 'Papaya', 'Mango')"
+  type        = string
+}
+
+variable "private_subnet_az_a" {
+  description = "Availability zone for the private subnet A"
+  type        = string
+}
+
+variable "private_subnet_az_b" {
+  description = "Availability zone for the private subnet B"
+  type        = string
+}
+
+variable "public_subnet_az" {
+  description = "Availability zone for the public subnet"
+  type        = string
+}
+
+variable "public_subnet_cidr" {
+  description = "CIDR block for the public subnet"
+  type        = string
+}
+
+variable "private_subnet_cidr_a" {
+  description = "CIDR block for the private subnet A"
+  type        = string
+}
+
+variable "private_subnet_cidr_b" {
+  description = "CIDR block for the private subnet B"
+  type        = string
+}
+
+variable "vpc_cidr" {
+  description = "CIDR block for the VPC"
+  type        = string
+}
+
+variable "domain_name" {
+  description = "Domain name for DNS configuration"
+  type        = string
+}
+
+variable "dns_server_ip" {
+  description = "IP address of the DNS server"
+  type        = string
+}
