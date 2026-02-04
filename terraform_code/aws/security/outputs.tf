@@ -73,6 +73,11 @@ output "winrm_internal_flat_sg_id" {
   value       = module.security_groups.winrm_internal_flat_sg_id
 }
 
+output "oracle_target_sg_id" {
+  description = "ID of Oracle target security group"
+  value       = module.security_groups.oracle_target_sg_id
+}
+
 output "mssql_target_sg_id" {
   description = "ID of MSSQL target security group"
   value       = module.security_groups.mssql_target_sg_id

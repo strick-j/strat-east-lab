@@ -1,0 +1,58 @@
+# ===========================
+# AWS Variables
+# ===========================
+variable "aws_region" {
+  description = "AWS cloud region for the deployment"
+  type        = string
+}
+variable "statefile_bucket_name" {
+  description = "The name of the S3 bucket where the remote state file is stored."
+  type        = string
+}
+
+# ===========================
+# Resource Tagging Variables
+# ===========================
+variable "alias" {
+  description = "Short alias identifier for naming resources (e.g., 'Papaya', 'Mango')"
+  type        = string
+}
+variable "asset_owner_name" {
+  description = "Name of the asset owner for tagging resources"
+  type        = string
+}
+variable "iScheduler" {
+  description = "Instance scheduler tag for automated shutdown"
+  type        = string
+}
+
+# ===========================
+# RDS Oracle Variables
+# ===========================
+variable "instance_class" {
+  description = "The instance type of the RDS Oracle instance"
+  type        = string
+}
+variable "db_name" {
+  description = "The Oracle System ID (SID) for the RDS instance (max 8 alphanumeric characters)"
+  type        = string
+}
+variable "username" {
+  description = "The master username for the RDS Oracle instance"
+  type        = string
+}
+variable "license_model" {
+  description = "The license model for the RDS Oracle instance (license-included or bring-your-own-license)"
+  type        = string
+  default     = "license-included"
+}
+variable "backup_retention" {
+  description = "The days to retain backups for the RDS Oracle instance"
+  type        = number
+  default     = 7
+}
+variable "allocated_storage" {
+  description = "The allocated storage in gigabytes for the RDS Oracle instance"
+  type        = number
+  default     = 20
+}
