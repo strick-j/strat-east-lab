@@ -65,9 +65,9 @@ resource "aws_instance" "windows_domain_controller" {
     encrypted             = true
   }
 
-   metadata_options {
-    http_endpoint               = "enabled"
-    http_tokens                 = "required"
+  metadata_options {
+    http_endpoint = "enabled"
+    http_tokens   = "required"
   }
 
   tags = {

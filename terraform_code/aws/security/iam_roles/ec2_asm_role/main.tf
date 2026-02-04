@@ -1,7 +1,7 @@
 # 1) IAM role & instance profile so EC2 can call Secrets Manager & STS
 data "aws_iam_policy_document" "ec2_assume" {
   statement {
-    actions   = ["sts:AssumeRole"]
+    actions = ["sts:AssumeRole"]
     principals {
       type        = "Service"
       identifiers = ["ec2.amazonaws.com"]
