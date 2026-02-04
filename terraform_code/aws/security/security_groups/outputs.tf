@@ -83,6 +83,11 @@ output "winrm_internal_flat_sg_id" {
   value       = aws_security_group.winrm_internal_flat.id
 }
 
+output "oracle_target_sg_id" {
+  description = "The id of the security group"
+  value       = aws_security_group.oracle_target_sg.id
+}
+
 output "mssql_target_sg_id" {
   description = "The id of the security group"
   value       = aws_security_group.mssql_target_sg.id

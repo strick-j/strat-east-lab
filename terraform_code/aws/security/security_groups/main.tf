@@ -423,6 +423,33 @@ resource "aws_security_group" "postgresql_target_sg" {
 }
 
 
+resource "aws_security_group" "oracle_target_sg" {
+  name        = "${lower(var.alias)}-oracle-sg"
+  description = "Allow Oracle from private subnets only"
+  vpc_id      = var.vpc_id
+
+  ingress {
+    description = "Oracle access from private subnets"
+    from_port   = 1521
+    to_port     = 1521
+    protocol    = "tcp"
+    cidr_blocks = [var.private_subnet_cidr_a, var.private_subnet_cidr_b]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name  = "${lower(var.alias)}-oracle-sg"
+    Owner = var.asset_owner_name
+  }
+}
+
+
 resource "aws_security_group" "mssql_target_sg" {
   name        = "${lower(var.alias)}-mssql-sg"
   description = "Allow MSSQL from private subnets only"
