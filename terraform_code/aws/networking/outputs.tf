@@ -48,7 +48,7 @@ output "db_subnet_group_name" {
 output "public_subnet_cidr" {
   description = "The CIDR block of the public subnet"
   value       = module.vpc.public_subnet_cidr
-} 
+}
 output "private_subnet_cidr_a" {
   description = "The CIDR block of the private subnet A"
   value       = module.vpc.private_subnet_cidr_a

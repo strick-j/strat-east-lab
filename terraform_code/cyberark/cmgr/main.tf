@@ -4,9 +4,9 @@
 data "terraform_remote_state" "aws_foundation" {
   backend = "s3"
   config = {
-    region  = var.aws_region
-    bucket  = var.statefile_bucket_name
-    key     = "terraform/aws_foundation.tfstate"
+    region = var.aws_region
+    bucket = var.statefile_bucket_name
+    key    = "terraform/aws_foundation.tfstate"
   }
 }
 

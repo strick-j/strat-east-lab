@@ -60,5 +60,5 @@ resource "aws_db_instance" "postgresql" {
     CA_iSchedulerControl = "yes"
   }
 
-  depends_on = [ data.terraform_remote_state.aws_networking, data.terraform_remote_state.aws_security ]
+  depends_on = [data.terraform_remote_state.aws_networking, data.terraform_remote_state.aws_security]
 }

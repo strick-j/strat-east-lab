@@ -100,6 +100,6 @@ resource "aws_iam_role" "secrets_hub_onboarding_role" {
 }
 
 resource "aws_iam_role_policy_attachment" "cyberark_secrets_hub_policy_attachment" {
-  role = aws_iam_role.secrets_hub_onboarding_role.name
+  role       = aws_iam_role.secrets_hub_onboarding_role.name
   policy_arn = aws_iam_policy.secrets_hub_onboarding_policy.arn
 }
