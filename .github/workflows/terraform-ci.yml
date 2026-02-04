@@ -1,0 +1,108 @@
+name: Terraform CI
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'terraform_code/**'
+      - '.github/workflows/terraform-ci.yml'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'terraform_code/**'
+      - '.github/workflows/terraform-ci.yml'
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  terraform-fmt:
+    name: Terraform Format
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform Format Check
+        run: terraform fmt -check -recursive -diff
+        working-directory: terraform_code
+
+  tflint:
+    name: TFLint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup TFLint
+        uses: terraform-linters/setup-tflint@v4
+
+      - name: Initialize TFLint
+        run: tflint --init
+        working-directory: terraform_code
+
+      - name: Run TFLint
+        run: tflint --recursive --format compact
+        working-directory: terraform_code
+
+  terraform-validate:
+    name: Terraform Validate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Validate All Modules
+        run: |
+          exit_code=0
+
+          # Find all directories containing .tf files (excluding .terraform caches)
+          modules=$(find . -name '*.tf' -not -path '*/.terraform/*' -exec dirname {} \; | sort -u)
+
+          for module in $modules; do
+            echo "::group::Validating ${module}"
+
+            echo "Initializing ${module}..."
+            if ! terraform -chdir="${module}" init -backend=false -input=false 2>&1; then
+              echo "::error file=${module}::terraform init failed for ${module}"
+              exit_code=1
+              echo "::endgroup::"
+              continue
+            fi
+
+            echo "Validating ${module}..."
+            if ! terraform -chdir="${module}" validate 2>&1; then
+              echo "::error file=${module}::terraform validate failed for ${module}"
+              exit_code=1
+            fi
+
+            echo "::endgroup::"
+          done
+
+          exit $exit_code
+        working-directory: terraform_code
+
+  checkov:
+    name: Security Scan (Checkov)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run Checkov
+        uses: bridgecrewio/checkov-action@v12
+        with:
+          directory: terraform_code
+          framework: terraform
+          quiet: true
+          soft_fail: true
+          output_format: github_failed_only
