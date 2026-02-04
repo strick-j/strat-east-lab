@@ -2,8 +2,9 @@ resource "aws_s3_bucket" "secure_bucket" {
   bucket = var.bucket_name
 
   tags = {
-    Name  = var.bucket_name
-    Owner = var.asset_owner_name
+    Name    = var.bucket_name
+    Project = var.alias
+    Owner   = var.asset_owner_name
   }
 
   lifecycle {
